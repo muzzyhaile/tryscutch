@@ -5,26 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Clarity VoC - Minimal Customer Intelligence</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #FAFAFA; /* Zinc 50 */
+        background-color: #FFFFFF;
+        color: #09090b; /* zinc-950 */
       }
       /* Custom scrollbar for a cleaner look */
       ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+        width: 8px;
+        height: 8px;
       }
       ::-webkit-scrollbar-track {
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #E4E4E7; /* Zinc 200 */
-        border-radius: 3px;
+        background: #D4D4D8;
+        border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #D4D4D8; /* Zinc 300 */
+        background: #A1A1AA;
+      }
+      
+      /* Force input autofill to respect our design */
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover, 
+      input:-webkit-autofill:focus, 
+      input:-webkit-autofill:active,
+      textarea:-webkit-autofill,
+      textarea:-webkit-autofill:hover,
+      textarea:-webkit-autofill:focus,
+      textarea:-webkit-autofill:active {
+        -webkit-box-shadow: 0 0 0 30px white inset !important;
+        -webkit-text-fill-color: #09090b !important;
+        transition: background-color 5000s ease-in-out 0s;
       }
     </style>
   <script type="importmap">
@@ -35,7 +50,9 @@
     "recharts": "https://esm.sh/recharts@^3.5.1",
     "@google/genai": "https://esm.sh/@google/genai@^1.32.0",
     "react/": "https://esm.sh/react@^19.2.1/",
-    "react": "https://esm.sh/react@^19.2.1"
+    "react": "https://esm.sh/react@^19.2.1",
+    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
+    "jspdf": "https://esm.sh/jspdf@2.5.1"
   }
 }
 </script>

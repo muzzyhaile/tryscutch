@@ -8,28 +8,33 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const ANALYSIS_MODEL = "gemini-2.5-flash";
 
 export const analyzeFeedbackBatch = async (
-  feedbackItems: string[]
+  feedbackItems: string[],
+  context?: string
 ): Promise<AnalysisResult> => {
   if (!process.env.API_KEY) {
     throw new Error("API Key is missing. Please check your environment configuration.");
   }
 
-  // Limit items for the demo to prevent context overflow/latency, though Flash handles 1M tokens.
+  // Limit items for the demo to prevent context overflow/latency.
   // We'll take the first 500 items effectively.
   const slicedItems = feedbackItems.slice(0, 500);
-  const feedbackText = slicedItems.map((item, i) => `[${i + 1}] ${item}`).join("\n");
+  
+  // Create a numbered list for the AI to reference
+  const feedbackText = slicedItems.map((item, i) => `[ID: ${i}] ${item}`).join("\n");
 
   const prompt = `
     You are a world-class Voice-of-Customer analyst. 
-    Analyze the following list of customer feedback items. 
+    Analyze the following list of customer feedback items.
+    ${context ? `\nPRODUCT/COMPANY CONTEXT:\n${context}\n` : ''}
     
     Tasks:
-    1. Group them into stable, distinct taxonomic clusters based on semantic meaning.
-    2. Analyze the sentiment of each cluster (-1.0 to 1.0).
-    3. Assign a priority score (1-10) based on urgency, severity, and frequency.
-    4. Detect if a theme is "emerging" (new, rapid growth, or acute recent pain point).
-    5. Provide a high-level executive summary of the entire dataset.
-    6. Extract the top 3-5 distinct actionable priorities.
+    1. Group the feedback into stable, distinct taxonomic clusters based on semantic meaning.
+    2. IMPORTANT: For each cluster, you MUST list the "itemIds" (the integers provided in the input) of the specific feedback items that belong to it.
+    3. Analyze the sentiment of each cluster (-1.0 to 1.0).
+    4. Assign a priority score (1-10) based on urgency, severity, and frequency.
+    5. Detect if a theme is "emerging" (new, rapid growth, or acute recent pain point).
+    6. Provide a high-level executive summary of the entire dataset.
+    7. Extract the top 3-5 distinct actionable priorities.
 
     Return the result in strictly structured JSON format.
   `;
@@ -42,7 +47,7 @@ export const analyzeFeedbackBatch = async (
             text: prompt
         },
         {
-            text: `FEEDBACK DATA:\n${feedbackText}`
+            text: `FEEDBACK DATA LIST:\n${feedbackText}`
         }
       ],
       config: {
@@ -66,7 +71,11 @@ export const analyzeFeedbackBatch = async (
                   description: { type: Type.STRING, description: "1-2 sentence description of the theme." },
                   sentimentScore: { type: Type.NUMBER, description: "Sentiment score for this cluster (-1 to 1)." },
                   priorityScore: { type: Type.NUMBER, description: "Priority score (1-10)." },
-                  itemCount: { type: Type.NUMBER, description: "Estimated number of items in this cluster from the provided list." },
+                  itemIds: { 
+                    type: Type.ARRAY, 
+                    items: { type: Type.NUMBER }, 
+                    description: "The list of integer IDs (from the input) that belong to this cluster." 
+                  },
                   isEmerging: { type: Type.BOOLEAN, description: "True if this is an emerging trend." },
                   keyInsights: { 
                       type: Type.ARRAY, 
@@ -74,7 +83,7 @@ export const analyzeFeedbackBatch = async (
                       description: "2-3 key specific points mentioned in this cluster." 
                   }
                 },
-                required: ["name", "description", "sentimentScore", "priorityScore", "itemCount", "isEmerging", "keyInsights"]
+                required: ["name", "description", "sentimentScore", "priorityScore", "itemIds", "isEmerging", "keyInsights"]
               }
             }
           },
@@ -90,14 +99,15 @@ export const analyzeFeedbackBatch = async (
 
     const data = JSON.parse(jsonText);
 
-    // Map response to our internal types, adding IDs
+    // Map response to our internal types
     const clusters: Cluster[] = data.clusters.map((c: any, index: number) => ({
       id: `cluster-${index}-${Date.now()}`,
       name: c.name,
       description: c.description,
       sentimentScore: c.sentimentScore,
       priorityScore: c.priorityScore,
-      itemCount: c.itemCount,
+      itemCount: c.itemIds ? c.itemIds.length : 0,
+      itemIndices: c.itemIds || [], // Store the indices
       isEmerging: c.isEmerging,
       keyInsights: c.keyInsights || []
     }));
@@ -114,4 +124,46 @@ export const analyzeFeedbackBatch = async (
     console.error("Gemini Analysis Error:", error);
     throw error;
   }
+};
+
+export const generateStrategicAdvice = async (
+  clusterName: string,
+  feedbackItems: string[],
+  context?: string
+): Promise<string> => {
+    if (!process.env.API_KEY) {
+        throw new Error("API Key is missing.");
+    }
+
+    const itemsText = feedbackItems.slice(0, 50).map(i => `- ${i}`).join("\n");
+
+    const prompt = `
+        You are a specialized Product Strategy Consultant.
+        Focus Topic: "${clusterName}"
+        ${context ? `Product Context: ${context}` : ''}
+        
+        Analyze the raw feedback items below related to this topic.
+        Provide a concise, high-impact strategic implementation plan.
+        
+        Structure your response in Markdown:
+        1. **Root Cause Diagnosis**: What is really happening?
+        2. **Strategic Recommendation**: What should be done? (Short term & Long term)
+        3. **Expected Impact**: Why does this matter?
+        
+        Keep it professional, direct, and actionable. No fluff.
+        
+        Feedback Items:
+        ${itemsText}
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: ANALYSIS_MODEL,
+            contents: [{ text: prompt }]
+        });
+        return response.text || "Could not generate advice.";
+    } catch (e) {
+        console.error("Strategy Gen Error", e);
+        return "Failed to generate strategic advice. Please try again.";
+    }
 };

@@ -12,8 +12,10 @@ export interface Cluster {
   sentimentScore: number; // -1 to 1
   priorityScore: number; // 1 to 10
   itemCount: number;
+  itemIndices: number[]; // Indices of the FeedbackItems in the original array
   isEmerging: boolean;
   keyInsights: string[];
+  strategicAdvice?: string; // Specialized AI feedback
 }
 
 export interface AnalysisResult {
@@ -28,6 +30,7 @@ export interface Project {
   id: string;
   name: string;
   createdAt: string;
+  context?: string; // Product/Company background info
   status: 'draft' | 'analyzing' | 'completed';
   items: FeedbackItem[];
   analysis?: AnalysisResult;

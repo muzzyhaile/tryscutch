@@ -3,16 +3,18 @@ import { Layout } from './components/Layout';
 import { IngestionWizard } from './components/IngestionWizard';
 import { AnalysisView } from './components/AnalysisView';
 import { LandingPage } from './components/LandingPage';
-import { Project, AnalysisStatus, AnalysisResult } from './types';
+import { SettingsView } from './components/SettingsView';
+import { BillingView } from './components/BillingView';
+import { Project, AnalysisResult } from './types';
 import { analyzeFeedbackBatch } from './services/geminiService';
-import { Loader2, Plus, ArrowRight } from 'lucide-react';
+import { Loader2, Plus, ArrowRight, LayoutGrid } from 'lucide-react';
 
 const STORAGE_KEY = 'clarity_voc_projects';
 
 const App: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis'>('landing');
+  const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis' | 'settings' | 'billing'>('landing');
   const [isLoading, setIsLoading] = useState(false);
 
   // Load from local storage on mount
@@ -34,7 +36,7 @@ const App: React.FC = () => {
     }
   }, [projects]);
 
-  const handleAnalyze = async (name: string, items: string[]) => {
+  const handleAnalyze = async (name: string, items: string[], context?: string) => {
     setIsLoading(true);
     
     // Create Draft Project
@@ -44,10 +46,11 @@ const App: React.FC = () => {
       createdAt: new Date().toISOString(),
       status: 'analyzing',
       items: items.map((content, i) => ({ id: i.toString(), content })),
+      context: context
     };
 
     try {
-      const result: AnalysisResult = await analyzeFeedbackBatch(items);
+      const result: AnalysisResult = await analyzeFeedbackBatch(items, context);
       
       const completedProject: Project = {
         ...newProject,
@@ -64,6 +67,11 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleUpdateProject = (updatedProject: Project) => {
+    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+    setCurrentProject(updatedProject);
   };
 
   const deleteProject = (id: string, e: React.MouseEvent) => {
@@ -88,41 +96,49 @@ const App: React.FC = () => {
     }
 
     if (view === 'analysis' && currentProject) {
-      return <AnalysisView project={currentProject} />;
+      return <AnalysisView project={currentProject} onUpdateProject={handleUpdateProject} />;
+    }
+
+    if (view === 'settings') {
+      return <SettingsView />;
+    }
+
+    if (view === 'billing') {
+      return <BillingView />;
     }
 
     // Default: List View
     return (
-      <div className="space-y-8 animate-in fade-in duration-500">
-        <div className="flex items-center justify-between">
+      <div className="space-y-10 animate-in fade-in duration-500 max-w-7xl mx-auto">
+        <div className="flex items-end justify-between border-b border-zinc-100 pb-8">
             <div>
-                 <h1 className="text-3xl font-bold text-zinc-900">Your Projects</h1>
-                 <p className="text-zinc-500 mt-1">Manage and review your feedback analysis.</p>
+                 <h1 className="text-5xl font-bold tracking-tighter text-zinc-950">Projects</h1>
+                 <p className="text-xl text-zinc-500 mt-2 font-light">Manage and review your feedback analysis.</p>
             </div>
             <button 
                 onClick={() => setView('new')}
-                className="bg-zinc-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-zinc-800 transition-colors flex items-center gap-2"
+                className="bg-zinc-950 text-white px-6 py-3 rounded-xl text-base font-bold hover:bg-zinc-800 transition-colors flex items-center gap-2 shadow-lg hover:scale-105 transform duration-200"
             >
-                <Plus size={16} /> New Project
+                <Plus size={20} /> New Project
             </button>
         </div>
 
         {projects.length === 0 ? (
-          <div className="text-center py-24 bg-white rounded-2xl border border-dashed border-zinc-200">
-            <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Plus className="text-zinc-400" />
+          <div className="text-center py-32 bg-zinc-50 rounded-[2.5rem] border-2 border-dashed border-zinc-200">
+            <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+                <LayoutGrid className="text-zinc-300 w-10 h-10" />
             </div>
-            <h3 className="text-lg font-medium text-zinc-900">No projects yet</h3>
-            <p className="text-zinc-500 max-w-sm mx-auto mt-2 mb-6">Start by creating a new project to analyze your customer feedback.</p>
+            <h3 className="text-2xl font-bold text-zinc-950 mb-2">No projects yet</h3>
+            <p className="text-zinc-500 max-w-md mx-auto mb-8 text-lg">Start by creating a new project to analyze your customer feedback.</p>
             <button 
                 onClick={() => setView('new')}
-                className="text-indigo-600 font-medium hover:underline"
+                className="text-zinc-950 font-bold hover:underline text-lg"
             >
                 Create your first project
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {projects.map(p => (
               <div 
                 key={p.id}
@@ -130,29 +146,29 @@ const App: React.FC = () => {
                     setCurrentProject(p);
                     setView('analysis');
                 }}
-                className="group bg-white p-6 rounded-xl border border-zinc-200 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer relative"
+                className="group bg-white p-8 rounded-[2rem] border-2 border-zinc-100 hover:border-zinc-950 hover:shadow-2xl transition-all duration-300 cursor-pointer relative"
               >
-                <div className="flex justify-between items-start mb-4">
-                    <div className="h-10 w-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center font-bold text-lg">
+                <div className="flex justify-between items-start mb-6">
+                    <div className="h-14 w-14 bg-zinc-950 text-white rounded-2xl flex items-center justify-center font-bold text-2xl shadow-lg">
                         {p.name.charAt(0).toUpperCase()}
                     </div>
-                    {p.status === 'analyzing' && <Loader2 className="animate-spin text-zinc-400" size={18} />}
+                    {p.status === 'analyzing' && <Loader2 className="animate-spin text-zinc-400" size={24} />}
                     <button 
                         onClick={(e) => deleteProject(p.id, e)}
-                        className="text-zinc-300 hover:text-red-500 transition-colors p-1"
+                        className="text-zinc-300 hover:text-red-500 transition-colors p-2"
                     >
                         &times;
                     </button>
                 </div>
-                <h3 className="text-lg font-semibold text-zinc-900 mb-1 group-hover:text-indigo-600 transition-colors">{p.name}</h3>
-                <p className="text-sm text-zinc-500 mb-4">Created {new Date(p.createdAt).toLocaleDateString()}</p>
+                <h3 className="text-2xl font-bold text-zinc-950 mb-2 group-hover:text-indigo-600 transition-colors tracking-tight">{p.name}</h3>
+                <p className="text-sm font-medium text-zinc-400 mb-6 uppercase tracking-wider">Created {new Date(p.createdAt).toLocaleDateString()}</p>
                 
-                <div className="flex items-center justify-between pt-4 border-t border-zinc-50">
-                    <span className="text-xs font-medium text-zinc-500 bg-zinc-100 px-2 py-1 rounded-full">
+                <div className="flex items-center justify-between pt-6 border-t border-zinc-50">
+                    <span className="text-sm font-bold text-zinc-500 bg-zinc-100 px-3 py-1 rounded-full">
                         {p.items.length} items
                     </span>
-                    <span className="text-indigo-600 text-sm font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        View Report <ArrowRight size={14} />
+                    <span className="text-zinc-950 text-sm font-bold flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0">
+                        View Report <ArrowRight size={16} />
                     </span>
                 </div>
               </div>
@@ -170,6 +186,19 @@ const App: React.FC = () => {
           setView('list');
           setCurrentProject(null);
       }}
+      onSettings={() => {
+          setView('settings');
+          setCurrentProject(null);
+      }}
+      onBilling={() => {
+          setView('billing');
+          setCurrentProject(null);
+      }}
+      currentProjectName={
+          view === 'settings' ? 'Settings' : 
+          view === 'billing' ? 'Billing' : 
+          currentProject?.name
+      }
     >
       {renderContent()}
     </Layout>
