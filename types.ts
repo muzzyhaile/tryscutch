@@ -18,12 +18,24 @@ export interface Cluster {
   strategicAdvice?: string; // Specialized AI feedback
 }
 
+export interface ProductRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  category: 'feature' | 'improvement' | 'fix' | 'enhancement';
+  priority: 'high' | 'medium' | 'low';
+  effort: 'low' | 'medium' | 'high';
+  impact: string;
+  relatedClusters: string[]; // Cluster IDs
+}
+
 export interface AnalysisResult {
   summary: string;
   overallSentiment: number;
   clusters: Cluster[];
   topPriorities: string[];
   totalItemsProcessed: number;
+  productRecommendations?: ProductRecommendation[];
 }
 
 export interface Project {
@@ -42,4 +54,40 @@ export enum AnalysisStatus {
   ANALYZING = 'ANALYZING',
   COMPLETE = 'COMPLETE',
   ERROR = 'ERROR'
+}
+
+// Context Management Types
+export interface ICP {
+  id: string;
+  name: string;
+  description: string;
+  demographics?: string;
+  painPoints?: string;
+  goals?: string;
+  createdAt: string;
+}
+
+export interface ProductInfo {
+  id: string;
+  name: string;
+  description: string;
+  features?: string;
+  targetMarket?: string;
+  valueProposition?: string;
+  createdAt: string;
+}
+
+export interface MarketFeedback {
+  id: string;
+  name: string;
+  source: string;
+  content: string;
+  date?: string;
+  createdAt: string;
+}
+
+export interface ContextData {
+  icps: ICP[];
+  productInfos: ProductInfo[];
+  marketFeedbacks: MarketFeedback[];
 }

@@ -5,16 +5,23 @@ import { AnalysisView } from './components/AnalysisView';
 import { LandingPage } from './components/LandingPage';
 import { SettingsView } from './components/SettingsView';
 import { BillingView } from './components/BillingView';
-import { Project, AnalysisResult } from './types';
+import { ContextManager } from './components/ContextManager';
+import { Project, AnalysisResult, ContextData } from './types';
 import { analyzeFeedbackBatch } from './services/geminiService';
 import { Loader2, Plus, ArrowRight, LayoutGrid } from 'lucide-react';
 
 const STORAGE_KEY = 'clarity_voc_projects';
+const CONTEXT_STORAGE_KEY = 'clarity_context_data';
 
 const App: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis' | 'settings' | 'billing'>('landing');
+  const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis' | 'settings' | 'billing' | 'context'>('landing');
+  const [contextData, setContextData] = useState<ContextData>({
+    icps: [],
+    productInfos: [],
+    marketFeedbacks: []
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isPrintMode, setIsPrintMode] = useState(false);
 
@@ -29,6 +36,16 @@ const App: React.FC = () => {
         setProjects(loadedProjects);
       } catch (e) {
         console.error("Failed to parse projects", e);
+      }
+    }
+
+    // Load context data
+    const storedContext = localStorage.getItem(CONTEXT_STORAGE_KEY);
+    if (storedContext) {
+      try {
+        setContextData(JSON.parse(storedContext));
+      } catch (e) {
+        console.error("Failed to parse context data", e);
       }
     }
 
@@ -53,6 +70,11 @@ const App: React.FC = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
     }
   }, [projects]);
+
+  // Save context data to localStorage
+  useEffect(() => {
+    localStorage.setItem(CONTEXT_STORAGE_KEY, JSON.stringify(contextData));
+  }, [contextData]);
 
   const handleAnalyze = async (name: string, items: string[], context?: string) => {
     setIsLoading(true);
@@ -119,7 +141,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (view === 'new') {
-      return <IngestionWizard onAnalyze={handleAnalyze} isLoading={isLoading} />;
+      return <IngestionWizard onAnalyze={handleAnalyze} isLoading={isLoading} contextData={contextData} />;
     }
 
     if (view === 'analysis' && currentProject) {
@@ -132,6 +154,10 @@ const App: React.FC = () => {
 
     if (view === 'billing') {
       return <BillingView />;
+    }
+
+    if (view === 'context') {
+      return <ContextManager contextData={contextData} onUpdate={setContextData} />;
     }
 
     // Default: List View
@@ -221,9 +247,14 @@ const App: React.FC = () => {
           setView('billing');
           setCurrentProject(null);
       }}
+      onContextLibrary={() => {
+          setView('context');
+          setCurrentProject(null);
+      }}
       currentProjectName={
           view === 'settings' ? 'Settings' : 
           view === 'billing' ? 'Billing' : 
+          view === 'context' ? 'Context Library' :
           currentProject?.name
       }
     >

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Project, Cluster } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Download, TrendingUp, MessageSquare, X, Quote, Zap, FileDown, ArrowUp, ArrowDown, Bot, Sparkles, Loader2, Printer, Copy, Check } from 'lucide-react';
+import { Download, TrendingUp, MessageSquare, X, Quote, Zap, FileDown, ArrowUp, ArrowDown, Bot, Sparkles, Loader2, Printer, Copy, Check, Lightbulb, Package, Wrench, Rocket } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { generateStrategicAdvice } from '../services/geminiService';
+import { generateStrategicAdvice, generateProductRecommendations } from '../services/geminiService';
 
 interface AnalysisViewProps {
   project: Project;
@@ -18,6 +18,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
   const [isExporting, setIsExporting] = useState(false);
   const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false);
   const [hasCopied, setHasCopied] = useState(false);
+  const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false);
 
   // Auto-print effect
   useEffect(() => {
@@ -264,6 +265,60 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
     }
   };
 
+  const handleGenerateRecommendations = async () => {
+    if (!result) return;
+    setIsGeneratingRecommendations(true);
+    
+    try {
+        const recommendations = await generateProductRecommendations(
+            result.clusters,
+            project.items.map(i => i.content),
+            project.context
+        );
+        
+        const updatedProject = {
+            ...project,
+            analysis: {
+                ...result,
+                productRecommendations: recommendations
+            }
+        };
+        onUpdateProject(updatedProject);
+    } catch (e) {
+        console.error(e);
+    } finally {
+        setIsGeneratingRecommendations(false);
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch(category) {
+      case 'feature': return <Rocket size={20} />;
+      case 'improvement': return <TrendingUp size={20} />;
+      case 'fix': return <Wrench size={20} />;
+      case 'enhancement': return <Sparkles size={20} />;
+      default: return <Package size={20} />;
+    }
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    const colors = {
+      high: 'bg-rose-100 text-rose-700 border-rose-200',
+      medium: 'bg-amber-100 text-amber-700 border-amber-200',
+      low: 'bg-zinc-100 text-zinc-600 border-zinc-200'
+    };
+    return colors[priority as keyof typeof colors] || colors.low;
+  };
+
+  const getEffortBadge = (effort: string) => {
+    const colors = {
+      low: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+      medium: 'bg-blue-100 text-blue-700 border-blue-200',
+      high: 'bg-purple-100 text-purple-700 border-purple-200'
+    };
+    return colors[effort as keyof typeof colors] || colors.medium;
+  };
+
 
   return (
     <div className={`space-y-12 pb-24 animate-in fade-in duration-700 relative ${isPrintView ? 'p-12 max-w-[210mm] mx-auto' : ''}`}>
@@ -441,7 +496,100 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
             </div>
         </div>
 
-        {/* 5. Deep Dive Grid */}
+        {/* 5. Product Recommendations Section */}
+        {!isPrintView && (
+          <div id="product-recommendations" className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-8 md:p-12 rounded-[2.5rem] border border-indigo-100">
+            <div className="flex items-start justify-between mb-8">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-indigo-600 text-white rounded-xl">
+                    <Lightbulb size={24} />
+                  </div>
+                  <h3 className="text-3xl font-bold text-zinc-950 tracking-tight">Product Recommendations</h3>
+                </div>
+                <p className="text-zinc-600 text-lg">AI-powered actionable improvements based on customer feedback</p>
+              </div>
+              
+              <button 
+                onClick={handleGenerateRecommendations}
+                disabled={isGeneratingRecommendations}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50"
+              >
+                {isGeneratingRecommendations ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20}/>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={20} />
+                    {result?.productRecommendations?.length ? 'Regenerate' : 'Generate Ideas'}
+                  </>
+                )}
+              </button>
+            </div>
+
+            {result?.productRecommendations && result.productRecommendations.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {result.productRecommendations.map((rec) => (
+                  <div key={rec.id} className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-zinc-50 rounded-lg text-zinc-700">
+                          {getCategoryIcon(rec.category)}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-lg text-zinc-950">{rec.title}</h4>
+                          <span className="text-xs uppercase tracking-wider text-zinc-400 font-bold">{rec.category}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <p className="text-zinc-600 mb-4 leading-relaxed">{rec.description}</p>
+                    
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getPriorityBadge(rec.priority)}`}>
+                        Priority: {rec.priority}
+                      </span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getEffortBadge(rec.effort)}`}>
+                        Effort: {rec.effort}
+                      </span>
+                    </div>
+                    
+                    <div className="pt-4 border-t border-zinc-100">
+                      <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Expected Impact</div>
+                      <p className="text-sm text-zinc-700 font-medium">{rec.impact}</p>
+                    </div>
+                    
+                    {rec.relatedClusters.length > 0 && (
+                      <div className="pt-4 border-t border-zinc-100 mt-4">
+                        <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Related Themes</div>
+                        <div className="flex flex-wrap gap-2">
+                          {rec.relatedClusters.map(clusterId => {
+                            const cluster = result.clusters.find(c => c.id === clusterId);
+                            return cluster ? (
+                              <span key={clusterId} className="px-2 py-1 bg-zinc-100 text-zinc-700 rounded text-xs font-medium">
+                                {cluster.name}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 border-2 border-dashed border-indigo-200 rounded-2xl bg-white/50">
+                <Lightbulb size={48} className="mx-auto mb-4 text-indigo-300" />
+                <p className="text-zinc-500 font-medium">Click "Generate Ideas" to get AI-powered product recommendations</p>
+                <p className="text-sm text-zinc-400 mt-2">Based on your feedback themes and customer priorities</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 6. Deep Dive Grid */}
         <div className="space-y-8">
             <h3 id="report-deep-dive-title" className="text-4xl font-bold text-zinc-950 tracking-tighter">Deep Dive Analysis</h3>
             

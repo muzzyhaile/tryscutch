@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, Settings, Plus, LayoutGrid, LogOut } from 'lucide-react';
+import { Layers, Settings, Plus, LayoutGrid, LogOut, Users, Package, TrendingUp } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -7,6 +7,7 @@ interface LayoutProps {
   onGoHome: () => void;
   onSettings: () => void;
   onBilling: () => void;
+  onContextLibrary: () => void;
   currentProjectName?: string;
 }
 
@@ -16,6 +17,7 @@ export const Layout: React.FC<LayoutProps> = ({
     onGoHome, 
     onSettings,
     onBilling,
+    onContextLibrary,
     currentProjectName 
 }) => {
   return (
@@ -45,6 +47,15 @@ export const Layout: React.FC<LayoutProps> = ({
             >
               <Settings size={20} className="group-hover:scale-110 transition-transform"/>
               Settings
+            </button>
+            
+            <div className="px-4 py-2 text-xs font-bold text-zinc-400 uppercase tracking-widest mt-8">Context Library</div>
+            <button 
+                onClick={onContextLibrary}
+                className="group flex items-center gap-4 w-full px-4 py-3 text-base font-semibold text-zinc-500 rounded-xl hover:bg-white hover:text-zinc-950 hover:shadow-sm transition-all text-left border border-transparent hover:border-zinc-200"
+            >
+              <Layers size={20} className="group-hover:scale-110 transition-transform"/>
+              Manage Contexts
             </button>
           </nav>
         </div>

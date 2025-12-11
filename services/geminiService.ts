@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { AnalysisResult, Cluster } from "../types";
+import { AnalysisResult, Cluster, ProductRecommendation } from "../types";
 
 // Initialize Gemini Client
 // CRITICAL: process.env.API_KEY must be available in the environment.
@@ -165,5 +165,92 @@ export const generateStrategicAdvice = async (
     } catch (e) {
         console.error("Strategy Gen Error", e);
         return "Failed to generate strategic advice. Please try again.";
+    }
+};
+
+export const generateProductRecommendations = async (
+  clusters: Cluster[],
+  feedbackItems: string[],
+  context?: string
+): Promise<ProductRecommendation[]> => {
+    if (!process.env.API_KEY) {
+        throw new Error("API Key is missing.");
+    }
+
+    const clustersText = clusters.map(c => 
+        `- ${c.name} (Priority: ${c.priorityScore}/10, Sentiment: ${c.sentimentScore.toFixed(2)}, Volume: ${c.itemCount})\n  ${c.description}`
+    ).join("\n");
+
+    const prompt = `
+        You are a Product Manager analyzing customer feedback to generate actionable product recommendations.
+        ${context ? `Product Context: ${context}` : ''}
+        
+        Based on the following feedback themes and clusters, generate 5-8 specific, actionable product recommendations.
+        Each recommendation should address real pain points or opportunities identified in the feedback.
+        
+        Clusters:
+        ${clustersText}
+        
+        For each recommendation, provide:
+        - A clear, specific title
+        - A detailed description of what should be built/changed/fixed
+        - Category: feature, improvement, fix, or enhancement
+        - Priority: high, medium, or low (based on impact and urgency)
+        - Effort estimate: low, medium, or high
+        - Expected impact on users
+        - Which cluster IDs this addresses (use the cluster names to identify)
+        
+        Return as structured JSON.
+    `;
+
+    try {
+        const response = await ai.models.generateContent({
+            model: ANALYSIS_MODEL,
+            contents: [{ text: prompt }],
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        recommendations: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    title: { type: Type.STRING },
+                                    description: { type: Type.STRING },
+                                    category: { type: Type.STRING, enum: ["feature", "improvement", "fix", "enhancement"] },
+                                    priority: { type: Type.STRING, enum: ["high", "medium", "low"] },
+                                    effort: { type: Type.STRING, enum: ["low", "medium", "high"] },
+                                    impact: { type: Type.STRING },
+                                    relatedClusterNames: { type: Type.ARRAY, items: { type: Type.STRING } }
+                                },
+                                required: ["title", "description", "category", "priority", "effort", "impact", "relatedClusterNames"]
+                            }
+                        }
+                    },
+                    required: ["recommendations"]
+                }
+            }
+        });
+
+        const data = JSON.parse(response.text);
+        
+        // Map cluster names back to IDs
+        return data.recommendations.map((rec: any, index: number) => ({
+            id: `rec-${index}-${Date.now()}`,
+            title: rec.title,
+            description: rec.description,
+            category: rec.category,
+            priority: rec.priority,
+            effort: rec.effort,
+            impact: rec.impact,
+            relatedClusters: rec.relatedClusterNames
+                .map((name: string) => clusters.find(c => c.name.toLowerCase().includes(name.toLowerCase()))?.id)
+                .filter(Boolean)
+        }));
+    } catch (e) {
+        console.error("Product Recommendations Error", e);
+        return [];
     }
 };
