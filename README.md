@@ -57,6 +57,70 @@ Follow these steps to get Clarity running on your local machine.
 - **Styling**: Tailwind CSS + Lucide React
 - **Visualization**: Recharts
 - **Export**: html2canvas, jspdf
+- **Testing**: Vitest + React Testing Library
+- **CI/CD**: GitHub Actions
+
+## 🏗️ Architecture
+
+Clarity follows SOLID principles and clean architecture patterns:
+
+### Design Patterns
+
+- **Repository Pattern**: Storage abstraction layer (`lib/storage.ts`) separates data persistence from business logic
+- **Strategy Pattern**: AI service abstraction (`lib/aiService.ts`) allows swapping AI providers without code changes
+- **Custom Hooks**: Separation of concerns with `useProjects`, `useContextData`, `useForms`, `useLanguage`
+- **Error Boundaries**: React error boundaries catch and display errors gracefully
+
+### Project Structure
+
+```
+claritytool/
+├── components/      # React UI components
+├── services/        # Legacy service layer (being phased out)
+├── lib/            # Core abstractions and utilities
+│   ├── storage.ts         # Storage abstraction (Repository pattern)
+│   ├── aiService.ts       # AI service abstraction (Strategy pattern)
+│   └── geminiProvider.ts  # Gemini AI implementation
+├── hooks/          # Custom React hooks
+│   ├── useProjects.ts
+│   ├── useContextData.ts
+│   ├── useForms.ts
+│   └── useLanguage.ts
+├── test/           # Test files and setup
+├── types.ts        # TypeScript type definitions
+└── .github/        # CI/CD workflows
+```
+
+### Testing
+
+Run tests with:
+
+```bash
+npm test              # Run tests
+npm run test:ui       # Run tests with UI
+npm run test:coverage # Run tests with coverage
+```
+
+## 🧪 Development
+
+### Running Tests
+
+```bash
+npm test
+```
+
+### Building for Production
+
+```bash
+npm run build
+```
+
+### Code Quality
+
+- **TypeScript**: Full type safety throughout the codebase
+- **Error Handling**: Comprehensive error boundaries and try-catch blocks
+- **Testing**: Unit tests for critical functionality
+- **CI/CD**: Automated testing and type checking on every push
 
 ## 📄 License
 
