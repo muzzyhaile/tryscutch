@@ -254,3 +254,27 @@ export const generateProductRecommendations = async (
         return [];
     }
 };
+
+// Translate text to target language
+export const translateText = async (
+  text: string, 
+  targetLanguage: string
+): Promise<string> => {
+  if (!process.env.API_KEY) {
+    throw new Error("API Key is missing. Please check your environment configuration.");
+  }
+
+  const prompt = `Translate the following text to ${targetLanguage}. Provide only the translation, no explanations or additional text:\n\n${text}`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: ANALYSIS_MODEL,
+      contents: [{ text: prompt }]
+    });
+
+    return response.text || text;
+  } catch (e) {
+    console.error("Translation Error", e);
+    return text;
+  }
+};

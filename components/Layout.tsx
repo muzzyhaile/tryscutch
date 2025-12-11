@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, Settings, Plus, LayoutGrid, LogOut, Users, Package, TrendingUp } from 'lucide-react';
+import { Layers, Settings, Plus, LayoutGrid, LogOut, Users, Package, TrendingUp, FileText, Inbox } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -8,6 +8,8 @@ interface LayoutProps {
   onSettings: () => void;
   onBilling: () => void;
   onContextLibrary: () => void;
+  onForms: () => void;
+  onResponses: () => void;
   currentProjectName?: string;
 }
 
@@ -18,6 +20,8 @@ export const Layout: React.FC<LayoutProps> = ({
     onSettings,
     onBilling,
     onContextLibrary,
+    onForms,
+    onResponses,
     currentProjectName 
 }) => {
   return (
@@ -40,6 +44,20 @@ export const Layout: React.FC<LayoutProps> = ({
             >
               <LayoutGrid size={20} className="group-hover:scale-110 transition-transform"/>
               Projects
+            </button>
+            <button 
+                onClick={onForms}
+                className="group flex items-center gap-4 w-full px-4 py-3 text-base font-semibold text-zinc-500 rounded-xl hover:bg-white hover:text-zinc-950 hover:shadow-sm transition-all text-left border border-transparent hover:border-zinc-200"
+            >
+              <FileText size={20} className="group-hover:scale-110 transition-transform"/>
+              Forms
+            </button>
+            <button 
+                onClick={onResponses}
+                className="group flex items-center gap-4 w-full px-4 py-3 text-base font-semibold text-zinc-500 rounded-xl hover:bg-white hover:text-zinc-950 hover:shadow-sm transition-all text-left border border-transparent hover:border-zinc-200"
+            >
+              <Inbox size={20} className="group-hover:scale-110 transition-transform"/>
+              Responses
             </button>
             <button 
                 onClick={onSettings}

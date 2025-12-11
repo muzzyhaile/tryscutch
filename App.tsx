@@ -6,24 +6,39 @@ import { LandingPage } from './components/LandingPage';
 import { SettingsView } from './components/SettingsView';
 import { BillingView } from './components/BillingView';
 import { ContextManager } from './components/ContextManager';
+import { FormBuilder } from './components/FormBuilder';
+import { PublicForm } from './components/PublicForm';
+import { ResponseViewer } from './components/ResponseViewer';
+import { LanguageSwitcher } from './components/LanguageSwitcher';
 import { Project, AnalysisResult, ContextData } from './types';
+import { FeedbackForm, FormResponse } from './types-forms';
+import { SupportedLanguage } from './types-languages';
 import { analyzeFeedbackBatch } from './services/geminiService';
 import { Loader2, Plus, ArrowRight, LayoutGrid } from 'lucide-react';
 
 const STORAGE_KEY = 'clarity_voc_projects';
 const CONTEXT_STORAGE_KEY = 'clarity_context_data';
+const FORMS_STORAGE_KEY = 'clarity_feedback_forms';
+const RESPONSES_STORAGE_KEY = 'clarity_form_responses';
+const LANGUAGE_STORAGE_KEY = 'clarity_language';
 
 const App: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis' | 'settings' | 'billing' | 'context'>('landing');
+  const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis' | 'settings' | 'billing' | 'context' | 'forms' | 'responses'>('landing');
   const [contextData, setContextData] = useState<ContextData>({
     icps: [],
     productInfos: [],
-    marketFeedbacks: []
+    marketFeedbacks: [],
+    productPrinciples: []
   });
+  const [forms, setForms] = useState<FeedbackForm[]>([]);
+  const [responses, setResponses] = useState<FormResponse[]>([]);
+  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>('en');
   const [isLoading, setIsLoading] = useState(false);
   const [isPrintMode, setIsPrintMode] = useState(false);
+  const [isFormView, setIsFormView] = useState(false);
+  const [formIdParam, setFormIdParam] = useState<string | null>(null);
 
   // Load from local storage on mount & Check for Print Mode
   useEffect(() => {
@@ -47,6 +62,41 @@ const App: React.FC = () => {
       } catch (e) {
         console.error("Failed to parse context data", e);
       }
+    }
+
+    // Load forms data
+    const storedForms = localStorage.getItem(FORMS_STORAGE_KEY);
+    if (storedForms) {
+      try {
+        setForms(JSON.parse(storedForms));
+      } catch (e) {
+        console.error("Failed to parse forms data", e);
+      }
+    }
+
+    // Load responses data
+    const storedResponses = localStorage.getItem(RESPONSES_STORAGE_KEY);
+    if (storedResponses) {
+      try {
+        setResponses(JSON.parse(storedResponses));
+      } catch (e) {
+        console.error("Failed to parse responses data", e);
+      }
+    }
+
+    // Load language preference
+    const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY) as SupportedLanguage;
+    if (storedLanguage) {
+      setSelectedLanguage(storedLanguage);
+    }
+
+    // Check URL params for form view
+    const path = window.location.pathname;
+    const formMatch = path.match(/\/f\/([^/]+)/);
+    if (formMatch) {
+      setIsFormView(true);
+      setFormIdParam(formMatch[1]);
+      return;
     }
 
     // Check URL params for print mode
@@ -75,6 +125,31 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(CONTEXT_STORAGE_KEY, JSON.stringify(contextData));
   }, [contextData]);
+
+  // Save forms data to localStorage
+  useEffect(() => {
+    localStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(forms));
+  }, [forms]);
+
+  // Save responses data to localStorage
+  useEffect(() => {
+    localStorage.setItem(RESPONSES_STORAGE_KEY, JSON.stringify(responses));
+  }, [responses]);
+
+  // Update form response counts
+  useEffect(() => {
+    setForms(prevForms => 
+      prevForms.map(form => ({
+        ...form,
+        responseCount: responses.filter(r => r.formId === form.id).length
+      }))
+    );
+  }, [responses]);
+
+  // Save language preference to localStorage
+  useEffect(() => {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, selectedLanguage);
+  }, [selectedLanguage]);
 
   const handleAnalyze = async (name: string, items: string[], context?: string) => {
     setIsLoading(true);
@@ -125,11 +200,64 @@ const App: React.FC = () => {
     }
   }
 
+  const handleFormSubmit = (response: FormResponse) => {
+    setResponses(prev => [response, ...prev]);
+    
+    // Auto-import to analysis if enabled
+    const form = forms.find(f => f.id === response.formId);
+    if (form?.settings.autoImportToAnalysis) {
+      // Store for later import - could be enhanced to auto-create analysis
+      console.log('Auto-import enabled for response:', response.id);
+    }
+  }
+
+  const handleDeleteResponse = (id: string) => {
+    setResponses(prev => prev.filter(r => r.id !== id));
+  }
+
+  const handleImportResponses = async (responseIds: string[]) => {
+    const responsesToImport = responses.filter(r => responseIds.includes(r.id));
+    if (responsesToImport.length === 0) return;
+
+    // Get form name for project
+    const firstResponse = responsesToImport[0];
+    const form = forms.find(f => f.id === firstResponse.formId);
+    const projectName = `${form?.name || 'Form'} - Responses Import ${new Date().toLocaleDateString()}`;
+
+    // Convert responses to feedback items
+    const feedbackItems = responsesToImport.map(response => {
+      const answerTexts = response.answers.map(a => {
+        const question = forms.find(f => f.id === response.formId)?.questions.find(q => q.id === a.questionId);
+        const value = Array.isArray(a.value) ? a.value.join(', ') : String(a.value);
+        return `${question?.question || 'Question'}: ${value}`;
+      });
+      return answerTexts.join('\n');
+    });
+
+    // Mark as imported
+    setResponses(prev => prev.map(r => 
+      responseIds.includes(r.id) ? { ...r, imported: true } : r
+    ));
+
+    // Start analysis
+    await handleAnalyze(projectName, feedbackItems);
+  }
+
+  // SPECIAL RENDER FOR FORM VIEW
+  if (isFormView && formIdParam) {
+    return <PublicForm formId={formIdParam} forms={forms} onSubmit={handleFormSubmit} />;
+  }
+
+  // SPECIAL RENDER FOR FORM VIEW
+  if (isFormView && formIdParam) {
+    return <PublicForm formId={formIdParam} forms={forms} onSubmit={handleFormSubmit} />;
+  }
+
   // SPECIAL RENDER FOR PRINT MODE
   if (isPrintMode && currentProject) {
       return (
         <div className="bg-white min-h-screen p-0 m-0">
-             <AnalysisView project={currentProject} onUpdateProject={handleUpdateProject} isPrintView={true} />
+             <AnalysisView project={currentProject} onUpdateProject={handleUpdateProject} isPrintView={true} selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} />
         </div>
       );
   }
@@ -145,7 +273,7 @@ const App: React.FC = () => {
     }
 
     if (view === 'analysis' && currentProject) {
-      return <AnalysisView project={currentProject} onUpdateProject={handleUpdateProject} />;
+      return <AnalysisView project={currentProject} onUpdateProject={handleUpdateProject} selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} />;
     }
 
     if (view === 'settings') {
@@ -158,6 +286,19 @@ const App: React.FC = () => {
 
     if (view === 'context') {
       return <ContextManager contextData={contextData} onUpdate={setContextData} />;
+    }
+
+    if (view === 'forms') {
+      return <FormBuilder forms={forms} onUpdate={setForms} />;
+    }
+
+    if (view === 'responses') {
+      return <ResponseViewer 
+        responses={responses} 
+        forms={forms} 
+        onDelete={handleDeleteResponse}
+        onImport={handleImportResponses}
+      />;
     }
 
     // Default: List View
@@ -251,10 +392,20 @@ const App: React.FC = () => {
           setView('context');
           setCurrentProject(null);
       }}
+      onForms={() => {
+          setView('forms');
+          setCurrentProject(null);
+      }}
+      onResponses={() => {
+          setView('responses');
+          setCurrentProject(null);
+      }}
       currentProjectName={
           view === 'settings' ? 'Settings' : 
           view === 'billing' ? 'Billing' : 
           view === 'context' ? 'Context Library' :
+          view === 'forms' ? 'Forms' :
+          view === 'responses' ? 'Responses' :
           currentProject?.name
       }
     >

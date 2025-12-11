@@ -1,24 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Project, Cluster } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Download, TrendingUp, MessageSquare, X, Quote, Zap, FileDown, ArrowUp, ArrowDown, Bot, Sparkles, Loader2, Printer, Copy, Check, Lightbulb, Package, Wrench, Rocket } from 'lucide-react';
+import { Download, TrendingUp, MessageSquare, X, Quote, Zap, FileDown, ArrowUp, ArrowDown, Bot, Sparkles, Loader2, Printer, Copy, Check, Lightbulb, Package, Wrench, Rocket, Globe } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { generateStrategicAdvice, generateProductRecommendations } from '../services/geminiService';
+import { generateStrategicAdvice, generateProductRecommendations, translateText } from '../services/geminiService';
+import { SupportedLanguage, SUPPORTED_LANGUAGES } from '../types-languages';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 interface AnalysisViewProps {
   project: Project;
   onUpdateProject: (project: Project) => void;
   isPrintView?: boolean;
+  selectedLanguage?: SupportedLanguage;
+  onLanguageChange?: (language: SupportedLanguage) => void;
 }
 
-export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdateProject, isPrintView = false }) => {
+export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdateProject, isPrintView = false, selectedLanguage = 'en', onLanguageChange }) => {
   const result = project.analysis;
   const [selectedCluster, setSelectedCluster] = useState<Cluster | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false);
   const [hasCopied, setHasCopied] = useState(false);
   const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translatedContent, setTranslatedContent] = useState<{[key: string]: string}>({});
+  const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>('en');
 
   // Auto-print effect
   useEffect(() => {
@@ -265,6 +272,58 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
     }
   };
 
+  const handleTranslateReport = async () => {
+    if (currentLanguage === selectedLanguage) return;
+    
+    setIsTranslating(true);
+    const targetLang = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage);
+    
+    try {
+      const translations: {[key: string]: string} = {};
+      
+      // Translate summary
+      if (result.summary) {
+        translations['summary'] = await translateText(result.summary, targetLang?.name || 'English');
+      }
+      
+      // Translate top priorities
+      if (result.topPriorities) {
+        for (let i = 0; i < result.topPriorities.length; i++) {
+          const key = `priority-${i}`;
+          translations[key] = await translateText(result.topPriorities[i], targetLang?.name || 'English');
+        }
+      }
+      
+      // Translate cluster names and descriptions
+      for (const cluster of result.clusters) {
+        translations[`cluster-name-${cluster.id}`] = await translateText(cluster.name, targetLang?.name || 'English');
+        translations[`cluster-desc-${cluster.id}`] = await translateText(cluster.description, targetLang?.name || 'English');
+        
+        if (cluster.strategicAdvice) {
+          translations[`cluster-advice-${cluster.id}`] = await translateText(cluster.strategicAdvice, targetLang?.name || 'English');
+        }
+      }
+      
+      setTranslatedContent(translations);
+      setCurrentLanguage(selectedLanguage);
+    } catch (e) {
+      console.error('Translation failed:', e);
+      alert('Translation failed. Please try again.');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  // Auto-translate when language changes
+  useEffect(() => {
+    if (selectedLanguage !== 'en' && selectedLanguage !== currentLanguage) {
+      handleTranslateReport();
+    } else if (selectedLanguage === 'en') {
+      setTranslatedContent({});
+      setCurrentLanguage('en');
+    }
+  }, [selectedLanguage]);
+
   const handleGenerateRecommendations = async () => {
     if (!result) return;
     setIsGeneratingRecommendations(true);
@@ -329,43 +388,48 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
              <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-zinc-950 text-white uppercase tracking-widest">Completed</span>
              <span className="text-zinc-400 font-medium text-xs">{new Date(project.createdAt).toLocaleDateString()}</span>
           </div>
-          <h1 className="text-3xl md:text-5xl font-bold text-zinc-950 tracking-tighter">{project.name}</h1>
-          {project.context && (
-              <p className="text-zinc-500 text-base max-w-2xl font-light leading-relaxed">{project.context}</p>
-          )}
+          <h1 className="text-4xl md:text-5xl font-bold text-zinc-950 tracking-tight leading-tight">{project.name}</h1>
         </div>
         
-        {/* Buttons - Hidden in Print View */}
-        {!isPrintView && (
-            <div className="flex gap-3 no-print">
-                <button 
-                    onClick={copyMarkdown}
-                    className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
-                    title="Copy Report to Clipboard"
-                >
-                    {hasCopied ? <Check size={20} className="text-emerald-500"/> : <Copy size={20} />}
-                </button>
-                <button 
-                    onClick={openPrintPage}
-                    className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
-                    title="Open Print View"
-                >
-                    <Printer size={20} />
-                </button>
-                <button 
-                    onClick={exportJSON}
-                    className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
-                >
-                    <Download size={20} />
-                    JSON
-                </button>
-                <button 
-                    onClick={exportPDF}
-                    disabled={isExporting}
-                    className="flex items-center gap-2 px-6 py-3 bg-zinc-950 border-2 border-zinc-950 text-white font-bold rounded-xl hover:bg-zinc-800 hover:border-zinc-800 hover:shadow-lg transition-all"
-                >
-                    {isExporting ? <span className="animate-pulse">Generating...</span> : <><FileDown size={20} /> Export Report</>}
-                </button>
+        {!isPrintView && onLanguageChange && (
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                    <Globe size={18} className="text-zinc-400" />
+                    <LanguageSwitcher 
+                        currentLanguage={selectedLanguage}
+                        onLanguageChange={onLanguageChange}
+                    />
+                </div>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={copyMarkdown}
+                        className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
+                        title="Copy Report to Clipboard"
+                    >
+                        {hasCopied ? <Check size={20} className="text-emerald-500"/> : <Copy size={20} />}
+                    </button>
+                    <button 
+                        onClick={openPrintPage}
+                        className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
+                        title="Open Print View"
+                    >
+                        <Printer size={20} />
+                    </button>
+                    <button 
+                        onClick={exportJSON}
+                        className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
+                    >
+                        <Download size={20} />
+                        JSON
+                    </button>
+                    <button 
+                        onClick={exportPDF}
+                        disabled={isExporting}
+                        className="flex items-center gap-2 px-6 py-3 bg-zinc-950 border-2 border-zinc-950 text-white font-bold rounded-xl hover:bg-zinc-800 hover:border-zinc-800 hover:shadow-lg transition-all"
+                    >
+                        {isExporting ? <span className="animate-pulse">Generating...</span> : <><FileDown size={20} /> Export Report</>}
+                    </button>
+                </div>
             </div>
         )}
       </div>
@@ -388,9 +452,16 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
             </div>
 
             <div className="prose prose-xl prose-zinc max-w-none">
-                <p className="text-zinc-600 text-2xl leading-relaxed font-light">
-                    {result.summary}
-                </p>
+                {isTranslating ? (
+                    <div className="flex items-center gap-3 text-zinc-400">
+                        <Loader2 className="animate-spin" size={24} />
+                        <span>Translating...</span>
+                    </div>
+                ) : (
+                    <p className="text-zinc-600 text-2xl leading-relaxed font-light">
+                        {translatedContent['summary'] || result.summary}
+                    </p>
+                )}
             </div>
         </div>
 
@@ -408,7 +479,9 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                                 {i + 1}
                             </div>
                             <div className="flex-1 space-y-2">
-                                <span className="text-xl font-medium leading-relaxed block text-zinc-100">{item}</span>
+                                <span className="text-xl font-medium leading-relaxed block text-zinc-100">
+                                    {translatedContent[`priority-${i}`] || item}
+                                </span>
                                 {!isPrintView && (
                                     <div className="flex gap-2 opacity-0 group-hover/item:opacity-100 transition-opacity no-print">
                                         <button onClick={() => movePriority(i, 'up')} disabled={i === 0} className="text-zinc-500 hover:text-white"><ArrowUp size={16}/></button>
@@ -498,22 +571,22 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
 
         {/* 5. Product Recommendations Section */}
         {!isPrintView && (
-          <div id="product-recommendations" className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-8 md:p-12 rounded-[2.5rem] border border-indigo-100">
+          <div id="product-recommendations" className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-zinc-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
             <div className="flex items-start justify-between mb-8">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-indigo-600 text-white rounded-xl">
-                    <Lightbulb size={24} />
+                  <div className="p-3 bg-zinc-950 rounded-xl">
+                    <Lightbulb size={24} className="text-white" />
                   </div>
                   <h3 className="text-3xl font-bold text-zinc-950 tracking-tight">Product Recommendations</h3>
                 </div>
-                <p className="text-zinc-600 text-lg">AI-powered actionable improvements based on customer feedback</p>
+                <p className="text-zinc-500 text-lg">AI-powered actionable improvements based on customer feedback</p>
               </div>
               
               <button 
                 onClick={handleGenerateRecommendations}
                 disabled={isGeneratingRecommendations}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50"
+                className="px-6 py-3 bg-zinc-950 text-white rounded-xl font-bold hover:bg-zinc-800 transition-all flex items-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50"
               >
                 {isGeneratingRecommendations ? (
                   <>
@@ -532,10 +605,10 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
             {result?.productRecommendations && result.productRecommendations.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {result.productRecommendations.map((rec) => (
-                  <div key={rec.id} className="bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div key={rec.id} className="bg-zinc-50 p-6 rounded-2xl border border-zinc-200 hover:bg-white hover:border-zinc-300 transition-all">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-zinc-50 rounded-lg text-zinc-700">
+                        <div className="p-2 bg-white rounded-lg text-zinc-950 border border-zinc-200">
                           {getCategoryIcon(rec.category)}
                         </div>
                         <div>
@@ -556,20 +629,20 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                       </span>
                     </div>
                     
-                    <div className="pt-4 border-t border-zinc-100">
+                    <div className="pt-4 border-t border-zinc-200">
                       <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Expected Impact</div>
                       <p className="text-sm text-zinc-700 font-medium">{rec.impact}</p>
                     </div>
                     
                     {rec.relatedClusters.length > 0 && (
-                      <div className="pt-4 border-t border-zinc-100 mt-4">
+                      <div className="pt-4 border-t border-zinc-200 mt-4">
                         <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">Related Themes</div>
                         <div className="flex flex-wrap gap-2">
                           {rec.relatedClusters.map(clusterId => {
                             const cluster = result.clusters.find(c => c.id === clusterId);
                             return cluster ? (
-                              <span key={clusterId} className="px-2 py-1 bg-zinc-100 text-zinc-700 rounded text-xs font-medium">
-                                {cluster.name}
+                              <span key={clusterId} className="px-2 py-1 bg-zinc-100 text-zinc-700 rounded text-xs font-medium border border-zinc-200">
+                                {translatedContent[`cluster-name-${cluster.id}`] || cluster.name}
                               </span>
                             ) : null;
                           })}
@@ -580,8 +653,8 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 border-2 border-dashed border-indigo-200 rounded-2xl bg-white/50">
-                <Lightbulb size={48} className="mx-auto mb-4 text-indigo-300" />
+              <div className="text-center py-16 border-2 border-dashed border-zinc-200 rounded-2xl bg-zinc-50">
+                <Lightbulb size={48} className="mx-auto mb-4 text-zinc-300" />
                 <p className="text-zinc-500 font-medium">Click "Generate Ideas" to get AI-powered product recommendations</p>
                 <p className="text-sm text-zinc-400 mt-2">Based on your feedback themes and customer priorities</p>
               </div>
@@ -605,7 +678,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                         
                         <div className="flex justify-between items-start mb-4 pl-4">
                             <div className="space-y-1">
-                                <h4 className="font-bold text-zinc-950 text-2xl tracking-tight">{cluster.name}</h4>
+                                <h4 className="font-bold text-zinc-950 text-2xl tracking-tight">{translatedContent[`cluster-name-${cluster.id}`] || cluster.name}</h4>
                                 {cluster.isEmerging && (
                                     <div className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100 uppercase tracking-wider">
                                         <TrendingUp size={12} /> Emerging Theme
@@ -618,7 +691,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                         </div>
                         
                         <p className="text-zinc-500 text-lg mb-6 pl-4 leading-relaxed font-medium">
-                            {cluster.description}
+                            {translatedContent[`cluster-desc-${cluster.id}`] || cluster.description}
                         </p>
 
                         <div className="pl-4 space-y-3">
@@ -657,14 +730,14 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                 <div className="p-8 border-b border-zinc-100 flex items-start justify-between bg-white shrink-0">
                     <div className="space-y-2">
                         <div className="flex items-center gap-4">
-                            <h2 className="text-3xl md:text-4xl font-bold text-zinc-950 tracking-tight">{selectedCluster.name}</h2>
+                            <h2 className="text-3xl md:text-4xl font-bold text-zinc-950 tracking-tight">{translatedContent[`cluster-name-${selectedCluster.id}`] || selectedCluster.name}</h2>
                              {selectedCluster.isEmerging && (
                                 <span className="flex items-center gap-1 text-xs font-bold px-3 py-1 bg-indigo-600 text-white rounded-full">
                                     <TrendingUp size={12} /> Emerging
                                 </span>
                             )}
                         </div>
-                        <p className="text-zinc-500 text-lg">{selectedCluster.description}</p>
+                        <p className="text-zinc-500 text-lg">{translatedContent[`cluster-desc-${selectedCluster.id}`] || selectedCluster.description}</p>
                     </div>
                     <button 
                         onClick={() => setSelectedCluster(null)}
@@ -738,7 +811,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                             {selectedCluster.strategicAdvice ? (
                                 <div className="prose prose-zinc max-w-none bg-zinc-50 p-6 rounded-2xl border border-zinc-100">
                                     <div className="whitespace-pre-wrap font-medium text-zinc-700 leading-relaxed">
-                                        {selectedCluster.strategicAdvice}
+                                        {translatedContent[`cluster-advice-${selectedCluster.id}`] || selectedCluster.strategicAdvice}
                                     </div>
                                 </div>
                             ) : (

@@ -86,8 +86,94 @@ export interface MarketFeedback {
   createdAt: string;
 }
 
+export interface ProductPrinciple {
+  id: string;
+  title: string;
+  description: string;
+  category: 'design' | 'technical' | 'business' | 'user-experience' | 'other';
+  priority: 'high' | 'medium' | 'low';
+  createdAt: string;
+}
+
+// Pre-defined Product Principles Templates
+export const DEFAULT_PRODUCT_PRINCIPLES: Omit<ProductPrinciple, 'id' | 'createdAt'>[] = [
+  {
+    title: 'User-Centric Design',
+    description: 'Always prioritize user needs and pain points in every decision',
+    category: 'user-experience',
+    priority: 'high'
+  },
+  {
+    title: 'Simplicity First',
+    description: 'Keep interfaces clean and intuitive - reduce cognitive load',
+    category: 'design',
+    priority: 'high'
+  },
+  {
+    title: 'Data-Driven Decisions',
+    description: 'Base product decisions on user data and metrics, not assumptions',
+    category: 'business',
+    priority: 'high'
+  },
+  {
+    title: 'Fast Iteration',
+    description: 'Ship quickly, learn from users, and iterate based on feedback',
+    category: 'business',
+    priority: 'medium'
+  },
+  {
+    title: 'Performance Matters',
+    description: 'Optimize for speed and responsiveness - users notice delays',
+    category: 'technical',
+    priority: 'high'
+  },
+  {
+    title: 'Accessibility by Default',
+    description: 'Build inclusive products that work for everyone',
+    category: 'user-experience',
+    priority: 'high'
+  },
+  {
+    title: 'Mobile-First Approach',
+    description: 'Design for mobile devices first, then scale up',
+    category: 'design',
+    priority: 'medium'
+  },
+  {
+    title: 'Security & Privacy',
+    description: 'Protect user data and maintain trust through strong security practices',
+    category: 'technical',
+    priority: 'high'
+  },
+  {
+    title: 'Clear Value Proposition',
+    description: 'Users should immediately understand what problem you solve',
+    category: 'business',
+    priority: 'high'
+  },
+  {
+    title: 'Consistent Experience',
+    description: 'Maintain design consistency across all touchpoints',
+    category: 'design',
+    priority: 'medium'
+  },
+  {
+    title: 'Reduce Friction',
+    description: 'Remove unnecessary steps and barriers to user success',
+    category: 'user-experience',
+    priority: 'high'
+  },
+  {
+    title: 'Scalable Architecture',
+    description: 'Build systems that can grow with your user base',
+    category: 'technical',
+    priority: 'medium'
+  }
+];
+
 export interface ContextData {
   icps: ICP[];
   productInfos: ProductInfo[];
   marketFeedbacks: MarketFeedback[];
+  productPrinciples: ProductPrinciple[];
 }
