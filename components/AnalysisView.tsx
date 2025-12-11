@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, Cluster } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Download, TrendingUp, MessageSquare, X, Quote, Zap, FileDown, ArrowUp, ArrowDown, Bot, Sparkles, Loader2 } from 'lucide-react';
+import { Download, TrendingUp, MessageSquare, X, Quote, Zap, FileDown, ArrowUp, ArrowDown, Bot, Sparkles, Loader2, Printer, Copy, Check } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { generateStrategicAdvice } from '../services/geminiService';
@@ -9,13 +9,26 @@ import { generateStrategicAdvice } from '../services/geminiService';
 interface AnalysisViewProps {
   project: Project;
   onUpdateProject: (project: Project) => void;
+  isPrintView?: boolean;
 }
 
-export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdateProject }) => {
+export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdateProject, isPrintView = false }) => {
   const result = project.analysis;
   const [selectedCluster, setSelectedCluster] = useState<Cluster | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false);
+  const [hasCopied, setHasCopied] = useState(false);
+
+  // Auto-print effect
+  useEffect(() => {
+    if (isPrintView) {
+        // Small delay to ensure everything renders (especially charts)
+        const timer = setTimeout(() => {
+            window.print();
+        }, 800);
+        return () => clearTimeout(timer);
+    }
+  }, [isPrintView]);
 
   if (!result) return <div>No analysis available.</div>;
 
@@ -44,6 +57,37 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
     link.href = jsonString;
     link.download = `${project.name.replace(/\s+/g, "_")}_report.json`;
     link.click();
+  };
+
+  const copyMarkdown = () => {
+      let md = `# ${project.name} - Analysis Report\n\n`;
+      md += `**Date:** ${new Date(project.createdAt).toLocaleDateString()}\n`;
+      md += `**Items:** ${totalItems}\n\n`;
+      
+      md += `## Executive Summary\n\n${result.summary}\n\n`;
+      
+      md += `## Strategic Priorities\n\n`;
+      result.topPriorities.forEach((p, i) => {
+          md += `${i+1}. ${p}\n`;
+      });
+      md += `\n`;
+
+      md += `## Theme Overview\n\n`;
+      sortedClusters.forEach(c => {
+          md += `### ${c.name} (P${c.priorityScore})\n`;
+          md += `${c.description}\n`;
+          md += `*Sentiment: ${c.sentimentScore} | Volume: ${c.itemCount}*\n\n`;
+      });
+
+      navigator.clipboard.writeText(md);
+      setHasCopied(true);
+      setTimeout(() => setHasCopied(false), 2000);
+  };
+
+  const openPrintPage = () => {
+      // Constructs URL to open this specific project in print mode
+      const url = `${window.location.origin}${window.location.pathname}?print=true&projectId=${project.id}`;
+      window.open(url, '_blank');
   };
 
   const exportPDF = async () => {
@@ -222,7 +266,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
 
 
   return (
-    <div className="space-y-12 pb-24 animate-in fade-in duration-700 relative">
+    <div className={`space-y-12 pb-24 animate-in fade-in duration-700 relative ${isPrintView ? 'p-12 max-w-[210mm] mx-auto' : ''}`}>
       {/* Header Actions */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-zinc-100">
         <div className="space-y-2" id="report-header">
@@ -235,22 +279,40 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
               <p className="text-zinc-500 text-base max-w-2xl font-light leading-relaxed">{project.context}</p>
           )}
         </div>
-        <div className="flex gap-3">
-            <button 
-                onClick={exportJSON}
-                className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
-            >
-                <Download size={20} />
-                JSON
-            </button>
-            <button 
-                onClick={exportPDF}
-                disabled={isExporting}
-                className="flex items-center gap-2 px-6 py-3 bg-zinc-950 border-2 border-zinc-950 text-white font-bold rounded-xl hover:bg-zinc-800 hover:border-zinc-800 hover:shadow-lg transition-all"
-            >
-                {isExporting ? <span className="animate-pulse">Generating...</span> : <><FileDown size={20} /> Export Report</>}
-            </button>
-        </div>
+        
+        {/* Buttons - Hidden in Print View */}
+        {!isPrintView && (
+            <div className="flex gap-3 no-print">
+                <button 
+                    onClick={copyMarkdown}
+                    className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
+                    title="Copy Report to Clipboard"
+                >
+                    {hasCopied ? <Check size={20} className="text-emerald-500"/> : <Copy size={20} />}
+                </button>
+                <button 
+                    onClick={openPrintPage}
+                    className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
+                    title="Open Print View"
+                >
+                    <Printer size={20} />
+                </button>
+                <button 
+                    onClick={exportJSON}
+                    className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
+                >
+                    <Download size={20} />
+                    JSON
+                </button>
+                <button 
+                    onClick={exportPDF}
+                    disabled={isExporting}
+                    className="flex items-center gap-2 px-6 py-3 bg-zinc-950 border-2 border-zinc-950 text-white font-bold rounded-xl hover:bg-zinc-800 hover:border-zinc-800 hover:shadow-lg transition-all"
+                >
+                    {isExporting ? <span className="animate-pulse">Generating...</span> : <><FileDown size={20} /> Export Report</>}
+                </button>
+            </div>
+        )}
       </div>
 
       {/* Printable Report Area - IDs added for PDF Generator */}
@@ -292,10 +354,12 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                             </div>
                             <div className="flex-1 space-y-2">
                                 <span className="text-xl font-medium leading-relaxed block text-zinc-100">{item}</span>
-                                <div className="flex gap-2 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                                    <button onClick={() => movePriority(i, 'up')} disabled={i === 0} className="text-zinc-500 hover:text-white"><ArrowUp size={16}/></button>
-                                    <button onClick={() => movePriority(i, 'down')} disabled={i === result.topPriorities.length - 1} className="text-zinc-500 hover:text-white"><ArrowDown size={16}/></button>
-                                </div>
+                                {!isPrintView && (
+                                    <div className="flex gap-2 opacity-0 group-hover/item:opacity-100 transition-opacity no-print">
+                                        <button onClick={() => movePriority(i, 'up')} disabled={i === 0} className="text-zinc-500 hover:text-white"><ArrowUp size={16}/></button>
+                                        <button onClick={() => movePriority(i, 'down')} disabled={i === result.topPriorities.length - 1} className="text-zinc-500 hover:text-white"><ArrowDown size={16}/></button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ))}
@@ -326,7 +390,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
         </div>
 
         {/* 4. Chart */}
-        <div id="report-chart" className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-zinc-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+        <div id="report-chart" className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-zinc-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] break-inside-avoid">
             <h3 className="text-2xl font-bold text-zinc-950 tracking-tight mb-10">Theme Distribution</h3>
             <div className="h-[600px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -361,14 +425,14 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                             dataKey="itemCount" 
                             radius={[0, 12, 12, 0]} 
                             barSize={48}
-                            onClick={(data) => setSelectedCluster(data)}
-                            className="cursor-pointer"
+                            onClick={(data) => !isPrintView && setSelectedCluster(data)}
+                            className={!isPrintView ? "cursor-pointer" : ""}
                         >
                             {sortedClusters.map((entry, index) => (
                                 <Cell 
                                     key={`cell-${index}`} 
                                     fill={COLORS[index % COLORS.length]} 
-                                    className="hover:opacity-80 transition-opacity"
+                                    className={!isPrintView ? "hover:opacity-80 transition-opacity" : ""}
                                 />
                             ))}
                         </Bar>
@@ -386,8 +450,8 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                 {sortedClusters.map((cluster) => (
                     <div 
                         key={cluster.id} 
-                        onClick={() => setSelectedCluster(cluster)}
-                        className="group bg-white rounded-[2rem] border border-zinc-100 p-8 hover:shadow-xl transition-all duration-300 cursor-pointer relative overflow-hidden break-inside-avoid"
+                        onClick={() => !isPrintView && setSelectedCluster(cluster)}
+                        className={`group bg-white rounded-[2rem] border border-zinc-100 p-8 hover:shadow-xl transition-all duration-300 relative overflow-hidden break-inside-avoid ${!isPrintView ? 'cursor-pointer' : ''}`}
                     >
                         <div className="absolute top-0 left-0 w-1.5 h-full bg-transparent group-hover:bg-indigo-500 transition-colors"></div>
                         
@@ -434,14 +498,14 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
 
       </div>
 
-      {/* Detail Drawer */}
-      {selectedCluster && (
+      {/* Detail Drawer (Only show if not printing) */}
+      {!isPrintView && selectedCluster && (
           <>
             <div 
-                className="fixed inset-0 bg-zinc-950/40 backdrop-blur-sm z-40 transition-opacity" 
+                className="fixed inset-0 bg-zinc-950/40 backdrop-blur-sm z-40 transition-opacity no-print" 
                 onClick={() => setSelectedCluster(null)}
             />
-            <div className="fixed inset-y-0 right-0 w-full md:w-[800px] bg-white z-50 shadow-2xl transform transition-transform animate-in slide-in-from-right duration-300 flex flex-col">
+            <div className="fixed inset-y-0 right-0 w-full md:w-[800px] bg-white z-50 shadow-2xl transform transition-transform animate-in slide-in-from-right duration-300 flex flex-col no-print">
                 <div className="p-8 border-b border-zinc-100 flex items-start justify-between bg-white shrink-0">
                     <div className="space-y-2">
                         <div className="flex items-center gap-4">
