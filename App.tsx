@@ -16,16 +16,34 @@ const App: React.FC = () => {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis' | 'settings' | 'billing'>('landing');
   const [isLoading, setIsLoading] = useState(false);
+  const [isPrintMode, setIsPrintMode] = useState(false);
 
-  // Load from local storage on mount
+  // Load from local storage on mount & Check for Print Mode
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
+    let loadedProjects: Project[] = [];
+    
     if (stored) {
       try {
-        setProjects(JSON.parse(stored));
+        loadedProjects = JSON.parse(stored);
+        setProjects(loadedProjects);
       } catch (e) {
         console.error("Failed to parse projects", e);
       }
+    }
+
+    // Check URL params for print mode
+    const params = new URLSearchParams(window.location.search);
+    const print = params.get('print');
+    const projectId = params.get('projectId');
+
+    if (print === 'true' && projectId) {
+        setIsPrintMode(true);
+        const p = loadedProjects.find((p) => p.id === projectId);
+        if (p) {
+            setCurrentProject(p);
+            // We don't need to set view since we return early for print mode
+        }
     }
   }, []);
 
@@ -83,6 +101,15 @@ const App: React.FC = () => {
             setCurrentProject(null);
         }
     }
+  }
+
+  // SPECIAL RENDER FOR PRINT MODE
+  if (isPrintMode && currentProject) {
+      return (
+        <div className="bg-white min-h-screen p-0 m-0">
+             <AnalysisView project={currentProject} onUpdateProject={handleUpdateProject} isPrintView={true} />
+        </div>
+      );
   }
 
   // Render Landing Page completely separate from the App Layout
