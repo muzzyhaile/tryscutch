@@ -9,87 +9,31 @@ import { ContextManager } from './components/ContextManager';
 import { FormBuilder } from './components/FormBuilder';
 import { PublicForm } from './components/PublicForm';
 import { ResponseViewer } from './components/ResponseViewer';
-import { LanguageSwitcher } from './components/LanguageSwitcher';
-import { Project, AnalysisResult, ContextData } from './types';
-import { FeedbackForm, FormResponse } from './types-forms';
-import { SupportedLanguage } from './types-languages';
+import { Project, AnalysisResult } from './types';
 import { analyzeFeedbackBatch } from './services/geminiService';
+import { useProjects } from './hooks/useProjects';
+import { useContextData } from './hooks/useContextData';
+import { useForms } from './hooks/useForms';
+import { useLanguage } from './hooks/useLanguage';
 import { Loader2, Plus, ArrowRight, LayoutGrid } from 'lucide-react';
 
-const STORAGE_KEY = 'clarity_voc_projects';
-const CONTEXT_STORAGE_KEY = 'clarity_context_data';
-const FORMS_STORAGE_KEY = 'clarity_feedback_forms';
-const RESPONSES_STORAGE_KEY = 'clarity_form_responses';
-const LANGUAGE_STORAGE_KEY = 'clarity_language';
-
 const App: React.FC = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
+  // Custom hooks for state management with persistence
+  const { projects, addProject, updateProject, deleteProject: removeProject } = useProjects();
+  const { contextData, setContextData } = useContextData();
+  const { forms, setForms, responses, setResponses, deleteResponse } = useForms();
+  const { selectedLanguage, setSelectedLanguage } = useLanguage();
+  
+  // Local component state
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis' | 'settings' | 'billing' | 'context' | 'forms' | 'responses'>('landing');
-  const [contextData, setContextData] = useState<ContextData>({
-    icps: [],
-    productInfos: [],
-    marketFeedbacks: [],
-    productPrinciples: []
-  });
-  const [forms, setForms] = useState<FeedbackForm[]>([]);
-  const [responses, setResponses] = useState<FormResponse[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>('en');
   const [isLoading, setIsLoading] = useState(false);
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [isFormView, setIsFormView] = useState(false);
   const [formIdParam, setFormIdParam] = useState<string | null>(null);
 
-  // Load from local storage on mount & Check for Print Mode
+  // Check URL params on mount
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    let loadedProjects: Project[] = [];
-    
-    if (stored) {
-      try {
-        loadedProjects = JSON.parse(stored);
-        setProjects(loadedProjects);
-      } catch (e) {
-        console.error("Failed to parse projects", e);
-      }
-    }
-
-    // Load context data
-    const storedContext = localStorage.getItem(CONTEXT_STORAGE_KEY);
-    if (storedContext) {
-      try {
-        setContextData(JSON.parse(storedContext));
-      } catch (e) {
-        console.error("Failed to parse context data", e);
-      }
-    }
-
-    // Load forms data
-    const storedForms = localStorage.getItem(FORMS_STORAGE_KEY);
-    if (storedForms) {
-      try {
-        setForms(JSON.parse(storedForms));
-      } catch (e) {
-        console.error("Failed to parse forms data", e);
-      }
-    }
-
-    // Load responses data
-    const storedResponses = localStorage.getItem(RESPONSES_STORAGE_KEY);
-    if (storedResponses) {
-      try {
-        setResponses(JSON.parse(storedResponses));
-      } catch (e) {
-        console.error("Failed to parse responses data", e);
-      }
-    }
-
-    // Load language preference
-    const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY) as SupportedLanguage;
-    if (storedLanguage) {
-      setSelectedLanguage(storedLanguage);
-    }
-
     // Check URL params for form view
     const path = window.location.pathname;
     const formMatch = path.match(/\/f\/([^/]+)/);
@@ -105,36 +49,13 @@ const App: React.FC = () => {
     const projectId = params.get('projectId');
 
     if (print === 'true' && projectId) {
-        setIsPrintMode(true);
-        const p = loadedProjects.find((p) => p.id === projectId);
-        if (p) {
-            setCurrentProject(p);
-            // We don't need to set view since we return early for print mode
-        }
-    }
-  }, []);
-
-  // Save to local storage on change
-  useEffect(() => {
-    if (projects.length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+      setIsPrintMode(true);
+      const p = projects.find((proj) => proj.id === projectId);
+      if (p) {
+        setCurrentProject(p);
+      }
     }
   }, [projects]);
-
-  // Save context data to localStorage
-  useEffect(() => {
-    localStorage.setItem(CONTEXT_STORAGE_KEY, JSON.stringify(contextData));
-  }, [contextData]);
-
-  // Save forms data to localStorage
-  useEffect(() => {
-    localStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(forms));
-  }, [forms]);
-
-  // Save responses data to localStorage
-  useEffect(() => {
-    localStorage.setItem(RESPONSES_STORAGE_KEY, JSON.stringify(responses));
-  }, [responses]);
 
   // Update form response counts
   useEffect(() => {
@@ -144,12 +65,9 @@ const App: React.FC = () => {
         responseCount: responses.filter(r => r.formId === form.id).length
       }))
     );
-  }, [responses]);
+  }, [responses, setForms]);
 
-  // Save language preference to localStorage
-  useEffect(() => {
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, selectedLanguage);
-  }, [selectedLanguage]);
+
 
   const handleAnalyze = async (name: string, items: string[], context?: string) => {
     setIsLoading(true);
@@ -173,7 +91,7 @@ const App: React.FC = () => {
         analysis: result
       };
 
-      setProjects(prev => [completedProject, ...prev]);
+      addProject(completedProject);
       setCurrentProject(completedProject);
       setView('analysis');
     } catch (error) {
@@ -185,14 +103,14 @@ const App: React.FC = () => {
   };
 
   const handleUpdateProject = (updatedProject: Project) => {
-    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+    updateProject(updatedProject);
     setCurrentProject(updatedProject);
   };
 
-  const deleteProject = (id: string, e: React.MouseEvent) => {
+  const handleDeleteProject = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if(confirm("Are you sure you want to delete this project?")) {
-        setProjects(prev => prev.filter(p => p.id !== id));
+        removeProject(id);
         if(currentProject?.id === id) {
             setView('list');
             setCurrentProject(null);
@@ -212,7 +130,7 @@ const App: React.FC = () => {
   }
 
   const handleDeleteResponse = (id: string) => {
-    setResponses(prev => prev.filter(r => r.id !== id));
+    deleteResponse(id);
   }
 
   const handleImportResponses = async (responseIds: string[]) => {
@@ -241,11 +159,6 @@ const App: React.FC = () => {
 
     // Start analysis
     await handleAnalyze(projectName, feedbackItems);
-  }
-
-  // SPECIAL RENDER FOR FORM VIEW
-  if (isFormView && formIdParam) {
-    return <PublicForm formId={formIdParam} forms={forms} onSubmit={handleFormSubmit} />;
   }
 
   // SPECIAL RENDER FOR FORM VIEW
@@ -348,7 +261,7 @@ const App: React.FC = () => {
                     </div>
                     {p.status === 'analyzing' && <Loader2 className="animate-spin text-zinc-400" size={24} />}
                     <button 
-                        onClick={(e) => deleteProject(p.id, e)}
+                        onClick={(e) => handleDeleteProject(p.id, e)}
                         className="text-zinc-300 hover:text-red-500 transition-colors p-2"
                     >
                         &times;
