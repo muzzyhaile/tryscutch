@@ -7,6 +7,7 @@ import { SettingsView } from './components/SettingsView';
 import { BillingView } from './components/BillingView';
 import { ContextManager } from './components/ContextManager';
 import { FormBuilder } from './components/FormBuilder';
+import { FeedbackLibrary } from './components/FeedbackLibrary';
 import { PublicForm } from './components/PublicForm';
 import { ResponseViewer } from './components/ResponseViewer';
 import { Project, AnalysisResult } from './types';
@@ -14,6 +15,7 @@ import { analyzeFeedbackBatch } from './services/geminiService';
 import { useProjects } from './hooks/useProjects';
 import { useContextData } from './hooks/useContextData';
 import { useForms } from './hooks/useForms';
+import { useFeedbackLibrary } from './hooks/useFeedbackLibrary';
 import { useLanguage } from './hooks/useLanguage';
 import { Loader2, Plus, ArrowRight, LayoutGrid } from 'lucide-react';
 
@@ -22,11 +24,12 @@ const App: React.FC = () => {
   const { projects, addProject, updateProject, deleteProject: removeProject } = useProjects();
   const { contextData, setContextData } = useContextData();
   const { forms, setForms, responses, setResponses, deleteResponse } = useForms();
+  const { entries: feedbackEntries, setEntries: setFeedbackEntries } = useFeedbackLibrary();
   const { selectedLanguage, setSelectedLanguage } = useLanguage();
   
   // Local component state
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis' | 'settings' | 'billing' | 'context' | 'forms' | 'responses'>('landing');
+  const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis' | 'settings' | 'billing' | 'context' | 'forms' | 'feedback' | 'responses'>('landing');
   const [isLoading, setIsLoading] = useState(false);
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [isFormView, setIsFormView] = useState(false);
@@ -182,7 +185,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (view === 'new') {
-      return <IngestionWizard onAnalyze={handleAnalyze} isLoading={isLoading} contextData={contextData} />;
+      return <IngestionWizard onAnalyze={handleAnalyze} isLoading={isLoading} contextData={contextData} feedbackEntries={feedbackEntries} />;
     }
 
     if (view === 'analysis' && currentProject) {
@@ -203,6 +206,10 @@ const App: React.FC = () => {
 
     if (view === 'forms') {
       return <FormBuilder forms={forms} onUpdate={setForms} />;
+    }
+
+    if (view === 'feedback') {
+      return <FeedbackLibrary entries={feedbackEntries} onUpdate={setFeedbackEntries} />;
     }
 
     if (view === 'responses') {
@@ -305,6 +312,10 @@ const App: React.FC = () => {
           setView('context');
           setCurrentProject(null);
       }}
+      onFeedbackLibrary={() => {
+        setView('feedback');
+        setCurrentProject(null);
+      }}
       onForms={() => {
           setView('forms');
           setCurrentProject(null);
@@ -318,6 +329,7 @@ const App: React.FC = () => {
           view === 'billing' ? 'Billing' : 
           view === 'context' ? 'Context Library' :
           view === 'forms' ? 'Forms' :
+        view === 'feedback' ? 'Feedback Library' :
           view === 'responses' ? 'Responses' :
           currentProject?.name
       }

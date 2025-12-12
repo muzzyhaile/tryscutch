@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ICP, ProductInfo, MarketFeedback, ProductPrinciple, ContextData, DEFAULT_PRODUCT_PRINCIPLES } from '../types';
-import { Plus, Edit2, Trash2, Users, Package, TrendingUp, X, Save, Compass, Check } from 'lucide-react';
+import { Plus, Edit2, Trash2, Users, Package, TrendingUp, X, Save, Compass, Check, Sparkles, Loader2 } from 'lucide-react';
+import { generateMarketResearch } from '../services/geminiService';
 
 interface ContextManagerProps {
   contextData: ContextData;
@@ -13,6 +14,12 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
   const [activeTab, setActiveTab] = useState<ActiveTab>('icp');
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const [showResearch, setShowResearch] = useState(false);
+  const [researchCategory, setResearchCategory] = useState<'competitors' | 'pricing' | 'market' | 'other'>('competitors');
+  const [researchName, setResearchName] = useState('');
+  const [researchQuery, setResearchQuery] = useState('');
+  const [isResearchLoading, setIsResearchLoading] = useState(false);
   
   // ICP Form State
   const [icpForm, setIcpForm] = useState<Partial<ICP>>({});
@@ -33,6 +40,50 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
     setPrincipleForm({});
     setIsEditing(false);
     setEditingId(null);
+  };
+
+  const contextSummary = useMemo(() => {
+    const productBits = contextData.productInfos
+      .slice(0, 3)
+      .map(p => `Product: ${p.name}\n${p.description}${p.valueProposition ? `\nValue Proposition: ${p.valueProposition}` : ''}`)
+      .join('\n\n');
+    const icpBits = contextData.icps
+      .slice(0, 3)
+      .map(i => `ICP: ${i.name}\n${i.description}${i.painPoints ? `\nPain Points: ${i.painPoints}` : ''}`)
+      .join('\n\n');
+
+    return [productBits, icpBits].filter(Boolean).join('\n\n');
+  }, [contextData.icps, contextData.productInfos]);
+
+  const handleGenerateResearch = async () => {
+    if (!researchQuery.trim()) return;
+    setIsResearchLoading(true);
+    try {
+      const content = await generateMarketResearch(researchCategory, researchQuery.trim(), contextSummary || undefined);
+
+      const newResearch: MarketFeedback = {
+        id: Date.now().toString(),
+        name: (researchName || `${researchCategory.toUpperCase()} Research`).trim(),
+        source: 'AI Research',
+        content: `# ${researchName || `${researchCategory} research`}\n\n**Category:** ${researchCategory}\n\n**Request:** ${researchQuery.trim()}\n\n---\n\n${content}`,
+        date: new Date().toISOString().slice(0, 10),
+        createdAt: new Date().toISOString(),
+      };
+
+      onUpdate({
+        ...contextData,
+        marketFeedbacks: [newResearch, ...contextData.marketFeedbacks],
+      });
+
+      setShowResearch(false);
+      setResearchName('');
+      setResearchQuery('');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to generate research. Please check your API key and try again.');
+    } finally {
+      setIsResearchLoading(false);
+    }
   };
 
   // ICP Operations
@@ -453,14 +504,75 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
       {/* Market Feedback Tab */}
       {activeTab === 'market' && (
         <div className="space-y-6">
-          {!isEditing && (
+          <div className="flex flex-wrap gap-3">
+            {!isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-zinc-950 text-white rounded-xl font-bold hover:bg-zinc-800 transition-all"
+              >
+                <Plus size={20} />
+                New Market Feedback
+              </button>
+            )}
             <button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-zinc-950 text-white rounded-xl font-bold hover:bg-zinc-800 transition-all"
+              onClick={() => setShowResearch(prev => !prev)}
+              className="flex items-center gap-2 px-6 py-3 bg-white text-zinc-950 rounded-xl font-bold border border-zinc-200 hover:border-zinc-950 transition-all"
             >
-              <Plus size={20} />
-              New Market Feedback
+              <Sparkles size={20} />
+              AI Research
             </button>
+          </div>
+
+          {showResearch && (
+            <div className="bg-white p-6 rounded-2xl border border-zinc-200 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold">Generate Market Research</h3>
+                <button onClick={() => setShowResearch(false)} className="p-2 hover:bg-zinc-100 rounded-lg">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  placeholder="Research name (optional)"
+                  value={researchName}
+                  onChange={(e) => setResearchName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-zinc-300 focus:border-zinc-950 focus:outline-none font-medium"
+                />
+                <select
+                  value={researchCategory}
+                  onChange={(e) => setResearchCategory(e.target.value as any)}
+                  className="w-full px-4 py-3 rounded-lg border border-zinc-300 focus:border-zinc-950 focus:outline-none font-medium"
+                >
+                  <option value="competitors">Competitors</option>
+                  <option value="pricing">Pricing</option>
+                  <option value="market">Market</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <textarea
+                placeholder='What do you want to research? (e.g., "Top competitors for X and how they position pricing")'
+                value={researchQuery}
+                onChange={(e) => setResearchQuery(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-zinc-300 focus:border-zinc-950 focus:outline-none font-medium"
+                rows={5}
+              />
+
+              <button
+                onClick={handleGenerateResearch}
+                disabled={!researchQuery.trim() || isResearchLoading}
+                className="flex items-center gap-2 px-6 py-3 bg-zinc-950 text-white rounded-xl font-bold hover:bg-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isResearchLoading ? <Loader2 size={20} className="animate-spin" /> : <Sparkles size={20} />}
+                Generate & Save
+              </button>
+
+              <p className="text-xs text-zinc-400">
+                Note: this generates a research brief without live web browsing; it includes a deep-search plan and what to verify.
+              </p>
+            </div>
           )}
 
           {isEditing && (

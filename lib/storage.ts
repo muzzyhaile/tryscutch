@@ -83,6 +83,7 @@ export class InMemoryStorageRepository implements IStorage {
 export const STORAGE_KEYS = {
   PROJECTS: 'clarity_voc_projects',
   CONTEXT: 'clarity_context_data',
+  FEEDBACK_LIBRARY: 'clarity_feedback_library',
   FORMS: 'clarity_feedback_forms',
   RESPONSES: 'clarity_form_responses',
   LANGUAGE: 'clarity_language',

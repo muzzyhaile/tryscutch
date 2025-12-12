@@ -16,9 +16,12 @@
     "html2canvas": "1.4.1",
     "jspdf": "2.5.1",
     "lucide-react": "^0.559.0",
+    "papaparse": "^5.5.3",
+    "pdfjs-dist": "^4.10.38",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "recharts": "^3.5.1"
+    "recharts": "^3.5.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

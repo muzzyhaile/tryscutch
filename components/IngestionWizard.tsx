@@ -1,14 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { Upload, ArrowRight, Loader2, AlertCircle, ChevronDown, ChevronUp, FileText, Keyboard, Check } from 'lucide-react';
-import { ContextData } from '../types';
+import { ContextData, FeedbackEntry } from '../types';
+import { importFile, tableRowsToItems, ImportResult } from '../services/universalImport';
 
 interface IngestionWizardProps {
   onAnalyze: (name: string, data: string[], context?: string) => void;
   isLoading: boolean;
   contextData: ContextData;
+  feedbackEntries: FeedbackEntry[];
 }
 
-export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isLoading, contextData }) => {
+export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isLoading, contextData, feedbackEntries }) => {
   const [mode, setMode] = useState<'upload' | 'paste'>('paste');
   const [textInput, setTextInput] = useState('');
   const [projectName, setProjectName] = useState('');
@@ -17,13 +19,17 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isParsingFile, setIsParsingFile] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [selectedTextColumn, setSelectedTextColumn] = useState<string>('');
   
   // Context selection states
   const [selectedIcps, setSelectedIcps] = useState<string[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedFeedback, setSelectedFeedback] = useState<string[]>([]);
+  const [selectedLibraryEntries, setSelectedLibraryEntries] = useState<string[]>([]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -32,12 +38,28 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
       setProjectName(file.name.split('.')[0]);
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      setTextInput(text); 
-    };
-    reader.readAsText(file);
+    setError(null);
+    setIsParsingFile(true);
+    try {
+      const result = await importFile(file);
+      setImportResult(result);
+
+      if (result.kind === 'text') {
+        setSelectedTextColumn('');
+        setTextInput(result.rawText);
+      } else {
+        const defaultCol = result.detectedTextColumn ?? result.columns[0] ?? '';
+        setSelectedTextColumn(defaultCol);
+        setTextInput('');
+      }
+    } catch (err) {
+      setImportResult(null);
+      setSelectedTextColumn('');
+      setTextInput('');
+      setError(err instanceof Error ? err.message : 'Failed to import file.');
+    } finally {
+      setIsParsingFile(false);
+    }
   };
 
   const parseInput = (input: string): string[] => {
@@ -53,9 +75,27 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
       setError('Please give your project a name.');
       return;
     }
-    const items = parseInput(textInput);
+    const uploadedItems = (() => {
+      if (mode !== 'upload') return null;
+      if (!importResult) return null;
+      if (importResult.kind === 'text') return parseInput(importResult.rawText);
+      if (!selectedTextColumn) return null;
+      return tableRowsToItems(importResult.rows, selectedTextColumn);
+    })();
+
+    const textItems = mode === 'upload' && uploadedItems ? uploadedItems : parseInput(textInput);
+    const libraryItems = selectedLibraryEntries
+      .map(id => feedbackEntries.find(e => e.id === id))
+      .filter((e): e is FeedbackEntry => Boolean(e))
+      .map(e => {
+        const meta = [e.sourceType, e.app, e.source, e.date].filter(Boolean).join(' | ');
+        const ctx = e.entryContext ? `\n\nEntry Context:\n${e.entryContext}` : '';
+        return `[${meta}]\n${e.content}${ctx}`;
+      });
+
+    const items = [...textItems, ...libraryItems].filter(i => i.trim().length > 10);
     if (items.length === 0) {
-      setError('No valid feedback items found. Please paste data or upload a file.');
+      setError('No valid feedback items found. Paste data, upload a file, or select items from the Feedback Library.');
       return;
     }
     
@@ -148,25 +188,46 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
                     className="w-full h-96 px-8 py-8 text-lg rounded-none border-0 bg-white text-zinc-900 placeholder-zinc-400 focus:outline-none focus:ring-0 transition-all resize-none font-mono leading-relaxed"
                 />
              ) : (
-                 <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="h-96 flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-50 transition-all group"
-                 >
+                 <div className="h-96 flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-50 transition-all group" onClick={() => fileInputRef.current?.click()}>
                      <div className="p-6 bg-zinc-50 rounded-full mb-6 group-hover:scale-110 transition-transform group-hover:bg-zinc-100">
                         <FileText className="text-zinc-400 w-10 h-10 group-hover:text-zinc-900" />
                      </div>
                      <p className="text-2xl font-bold text-zinc-900 mb-2">{fileName || "Drop your file here"}</p>
-                     <p className="text-zinc-400">Supports .csv or .txt files</p>
+                     <p className="text-zinc-400">
+                       {isParsingFile ? 'Importing…' : 'Supports .csv, .xlsx, .pdf, .txt'}
+                     </p>
                      <input 
                         type="file" 
                         ref={fileInputRef} 
                         className="hidden" 
-                        accept=".csv,.txt"
+                        accept=".csv,.tsv,.txt,.pdf,.xlsx,.xls"
                         onChange={handleFileUpload}
                      />
                  </div>
              )}
         </div>
+
+        {mode === 'upload' && importResult?.kind === 'table' && importResult.columns.length > 0 && (
+          <div className="space-y-3">
+            <label className="text-sm font-bold text-zinc-950 uppercase tracking-widest">Feedback Column</label>
+            <select
+              value={selectedTextColumn}
+              onChange={(e) => setSelectedTextColumn(e.target.value)}
+              className="w-full px-6 py-4 text-base rounded-2xl border-2 border-zinc-100 bg-white text-zinc-900 focus:outline-none focus:border-zinc-950 focus:ring-0 transition-all"
+            >
+              {importResult.columns.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+            {importResult.detectedTextColumn && (
+              <p className="text-xs text-zinc-400">
+                Auto-detected: {importResult.detectedTextColumn}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Context */}
         <div className="pt-2">
@@ -271,6 +332,44 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
                             </div>
                         </div>
                     )}
+
+                          {/* Feedback Library Selection */}
+                          {feedbackEntries.length > 0 && (
+                            <div className="space-y-3">
+                              <label className="text-sm font-bold text-zinc-700 uppercase tracking-widest">Select Feedback Library Items (Optional)</label>
+                              <div className="grid grid-cols-1 gap-3">
+                                {feedbackEntries.slice(0, 40).map((entry) => (
+                                  <button
+                                    key={entry.id}
+                                    onClick={() => toggleSelection(entry.id, selectedLibraryEntries, setSelectedLibraryEntries)}
+                                    className={`p-4 rounded-xl border-2 text-left transition-all ${
+                                      selectedLibraryEntries.includes(entry.id)
+                                        ? 'border-zinc-950 bg-zinc-50'
+                                        : 'border-zinc-200 hover:border-zinc-300 bg-white'
+                                    }`}
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1">
+                                        <h4 className="font-bold text-zinc-950">{entry.title}</h4>
+                                        <p className="text-xs text-zinc-400 mb-1">
+                                          {[entry.sourceType, entry.app, entry.source, entry.date].filter(Boolean).join(' • ')}
+                                        </p>
+                                        <p className="text-xs text-zinc-500 line-clamp-2 whitespace-pre-wrap">{entry.content}</p>
+                                      </div>
+                                      {selectedLibraryEntries.includes(entry.id) && (
+                                        <Check size={20} className="text-zinc-950 ml-2 shrink-0" />
+                                      )}
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                              {feedbackEntries.length > 40 && (
+                                <p className="text-xs text-zinc-400">
+                                  Showing latest 40 items. Use Feedback Library to manage the full set.
+                                </p>
+                              )}
+                            </div>
+                          )}
 
                     {/* Manual Context Input */}
                     <div className="space-y-3">

@@ -86,6 +86,22 @@ export interface MarketFeedback {
   createdAt: string;
 }
 
+// Feedback Library Types
+export type FeedbackSourceType = 'interview' | 'social' | 'support' | 'note';
+
+export interface FeedbackEntry {
+  id: string;
+  title: string;
+  sourceType: FeedbackSourceType;
+  app?: string;
+  source?: string; // e.g. "Zoom", "Reddit", "Zendesk"
+  url?: string;
+  date?: string; // ISO or yyyy-mm-dd
+  content: string; // transcript / raw feedback
+  entryContext?: string; // per-entry context/instructions
+  createdAt: string;
+}
+
 export interface ProductPrinciple {
   id: string;
   title: string;

@@ -255,6 +255,54 @@ export const generateProductRecommendations = async (
     }
 };
 
+export const generateMarketResearch = async (
+  category: 'competitors' | 'pricing' | 'market' | 'other',
+  query: string,
+  context?: string
+): Promise<string> => {
+  if (!process.env.API_KEY) {
+    throw new Error('API Key is missing.');
+  }
+
+  const prompt = `
+You are a product research assistant.
+
+Goal: Help the user produce a high-signal research brief for "${category}".
+
+Important constraints:
+- You DO NOT have live browsing in this environment.
+- Do not claim you visited websites or verified real-time pricing.
+- Instead: provide hypotheses, what to verify, how to verify, and a structured brief.
+
+${context ? `Product/Company Context:\n${context}\n` : ''}
+
+User research request:
+${query}
+
+Output Markdown with these sections:
+1) Executive Summary (5-8 bullets)
+2) Key Hypotheses (what you suspect is true and why)
+3) What to Verify (specific questions and data points)
+4) Deep Search Plan (where to look + exact search queries to use)
+5) Competitive/Market Landscape (entities to compare; what dimensions)
+6) Pricing Considerations (if relevant: packaging, tiers, willingness-to-pay angles)
+7) Risks & Unknowns
+8) Recommended Next Actions (7-day plan)
+`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: ANALYSIS_MODEL,
+      contents: [{ text: prompt }]
+    });
+
+    return response.text || 'Could not generate research.';
+  } catch (e) {
+    console.error('Market Research Error', e);
+    return 'Failed to generate market research. Please try again.';
+  }
+};
+
 // Translate text to target language
 export const translateText = async (
   text: string, 

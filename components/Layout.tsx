@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layers, Settings, Plus, LayoutGrid, LogOut, Users, Package, TrendingUp, FileText, Inbox } from 'lucide-react';
+import { Layers, Settings, Plus, LayoutGrid, LogOut, FileText, Inbox, Library } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -8,6 +8,7 @@ interface LayoutProps {
   onSettings: () => void;
   onBilling: () => void;
   onContextLibrary: () => void;
+  onFeedbackLibrary: () => void;
   onForms: () => void;
   onResponses: () => void;
   currentProjectName?: string;
@@ -20,6 +21,7 @@ export const Layout: React.FC<LayoutProps> = ({
     onSettings,
     onBilling,
     onContextLibrary,
+  onFeedbackLibrary,
     onForms,
     onResponses,
     currentProjectName 
@@ -51,6 +53,13 @@ export const Layout: React.FC<LayoutProps> = ({
             >
               <FileText size={20} className="group-hover:scale-110 transition-transform"/>
               Forms
+            </button>
+            <button 
+                onClick={onFeedbackLibrary}
+                className="group flex items-center gap-4 w-full px-4 py-3 text-base font-semibold text-zinc-500 rounded-xl hover:bg-white hover:text-zinc-950 hover:shadow-sm transition-all text-left border border-transparent hover:border-zinc-200"
+            >
+              <Library size={20} className="group-hover:scale-110 transition-transform"/>
+              Feedback Library
             </button>
             <button 
                 onClick={onResponses}

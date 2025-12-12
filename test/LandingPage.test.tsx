@@ -22,7 +22,7 @@ describe('LandingPage', () => {
     const mockOnStart = () => {};
     render(<LandingPage onStart={mockOnStart} />);
     
-    expect(screen.getByText(/Instant Analysis/i)).toBeInTheDocument();
-    expect(screen.getByText(/Smart Clustering/i)).toBeInTheDocument();
+    expect(screen.getByText(/Understand Sentiment/i)).toBeInTheDocument();
+    expect(screen.getByText(/Automatic Clustering/i)).toBeInTheDocument();
   });
 });
