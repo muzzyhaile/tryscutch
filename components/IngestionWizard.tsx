@@ -84,14 +84,34 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
     })();
 
     const textItems = mode === 'upload' && uploadedItems ? uploadedItems : parseInput(textInput);
-    const libraryItems = selectedLibraryEntries
+
+    const selectedEntries = selectedLibraryEntries
       .map(id => feedbackEntries.find(e => e.id === id))
-      .filter((e): e is FeedbackEntry => Boolean(e))
-      .map(e => {
-        const meta = [e.sourceType, e.app, e.source, e.date].filter(Boolean).join(' | ');
-        const ctx = e.entryContext ? `\n\nEntry Context:\n${e.entryContext}` : '';
-        return `[${meta}]\n${e.content}${ctx}`;
-      });
+      .filter((e): e is FeedbackEntry => Boolean(e));
+
+    const libraryContextBlocks: string[] = [];
+    const libraryItems: string[] = [];
+
+    for (const entry of selectedEntries) {
+      const meta = [entry.sourceType, entry.app, entry.source, entry.date].filter(Boolean).join(' | ');
+
+      // If a bulk import exists, expand it into individual feedback items.
+      if (entry.bulkImport?.items?.length) {
+        libraryItems.push(...entry.bulkImport.items);
+
+        if (entry.entryContext) {
+          libraryContextBlocks.push(
+            `Feedback Library Context (${entry.title}${meta ? ` | ${meta}` : ''})${entry.topic ? `\nTopic: ${entry.topic}` : ''}${entry.tags?.length ? `\nTags: ${entry.tags.join(', ')}` : ''}:\n${entry.entryContext}`
+          );
+        }
+
+        continue;
+      }
+
+      // Fallback: treat the entry content as a single feedback item.
+      const ctx = entry.entryContext ? `\n\nEntry Context:\n${entry.entryContext}` : '';
+      libraryItems.push(`[${meta}]\n${entry.content}${ctx}`);
+    }
 
     const items = [...textItems, ...libraryItems].filter(i => i.trim().length > 10);
     if (items.length === 0) {
@@ -101,6 +121,12 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
     
     // Build combined context from selections and manual input
     let combinedContext = context;
+
+    if (libraryContextBlocks.length > 0) {
+      combinedContext = combinedContext
+        ? `${libraryContextBlocks.join('\n\n')}\n\n${combinedContext}`
+        : libraryContextBlocks.join('\n\n');
+    }
     
     if (selectedIcps.length > 0) {
       const icpTexts = selectedIcps.map(id => {
@@ -354,6 +380,18 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
                                         <p className="text-xs text-zinc-400 mb-1">
                                           {[entry.sourceType, entry.app, entry.source, entry.date].filter(Boolean).join(' • ')}
                                         </p>
+                                        {(entry.topic || (entry.tags && entry.tags.length > 0)) && (
+                                          <p className="text-xs text-zinc-400 mb-1">
+                                            {[entry.topic ? `Topic: ${entry.topic}` : null, entry.tags?.length ? `Tags: ${entry.tags.join(', ')}` : null]
+                                              .filter(Boolean)
+                                              .join(' • ')}
+                                          </p>
+                                        )}
+                                        {entry.bulkImport?.items?.length ? (
+                                          <p className="text-xs text-zinc-500 mb-1">
+                                            Imported dataset: {entry.bulkImport.items.length.toLocaleString()} lines
+                                          </p>
+                                        ) : null}
                                         <p className="text-xs text-zinc-500 line-clamp-2 whitespace-pre-wrap">{entry.content}</p>
                                       </div>
                                       {selectedLibraryEntries.includes(entry.id) && (

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { FeedbackEntry, FeedbackSourceType } from '../types';
-import { Plus, Edit2, Trash2, MessageSquare, Share2, Headphones, StickyNote, X, Save } from 'lucide-react';
+import { Plus, Edit2, Trash2, MessageSquare, Share2, Headphones, StickyNote, X, Save, Upload, Trash } from 'lucide-react';
+import { importFile, tableRowsToItems } from '../services/universalImport';
 
 interface FeedbackLibraryProps {
   entries: FeedbackEntry[];
@@ -59,6 +60,8 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
       date: form.date || '',
       content: form.content,
       entryContext: form.entryContext || '',
+      topic: form.topic || '',
+      tags: Array.isArray(form.tags) ? form.tags : [],
       createdAt: new Date().toISOString(),
     };
 
@@ -77,6 +80,61 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
       onUpdate(entries.filter(e => e.id !== id));
       if (editingId === id) resetForm();
     }
+  };
+
+  const parseTags = (raw: string): string[] => {
+    return raw
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
+  };
+
+  const handleBulkUpload = async (entry: FeedbackEntry, file: File) => {
+    try {
+      const result = await importFile(file);
+
+      const items = (() => {
+        if (result.kind === 'text') {
+          return result.rawText
+            .split(/\r?\n/)
+            .map(l => l.trim())
+            .filter(l => l.length > 0);
+        }
+
+        const selectedTextColumn = result.detectedTextColumn ?? result.columns[0] ?? '';
+        if (!selectedTextColumn) return [];
+        return tableRowsToItems(result.rows, selectedTextColumn);
+      })();
+
+      if (items.length === 0) {
+        alert('No rows could be imported from that file. If this is a CSV/XLSX table, make sure it has a column with the feedback text.');
+        return;
+      }
+
+      const updated: FeedbackEntry = {
+        ...entry,
+        bulkImport: {
+          sourceFileName: file.name,
+          importedAt: new Date().toISOString(),
+          kind: result.kind,
+          rowCount: items.length,
+          items,
+          selectedTextColumn: result.kind === 'table' ? (result.detectedTextColumn ?? result.columns[0] ?? undefined) : undefined,
+          detectedTextColumn: result.kind === 'table' ? result.detectedTextColumn : undefined,
+        },
+      };
+
+      onUpdate(entries.map(e => (e.id === entry.id ? updated : e)));
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to import file.');
+    }
+  };
+
+  const clearBulkImport = (entry: FeedbackEntry) => {
+    if (!confirm('Remove the imported dataset from this entry?')) return;
+    const updated: FeedbackEntry = { ...entry, bulkImport: undefined };
+    onUpdate(entries.map(e => (e.id === entry.id ? updated : e)));
   };
 
   const tabCount = (t: ActiveTab) => entries.filter(e => e.sourceType === t).length;
@@ -154,6 +212,13 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
               className="w-full px-4 py-3 rounded-lg border border-zinc-300 focus:border-zinc-950 focus:outline-none font-medium"
             />
             <input
+              type="text"
+              placeholder="Topic (optional, e.g. Billing)"
+              value={form.topic || ''}
+              onChange={(e) => setForm({ ...form, topic: e.target.value })}
+              className="w-full px-4 py-3 rounded-lg border border-zinc-300 focus:border-zinc-950 focus:outline-none font-medium"
+            />
+            <input
               type="date"
               placeholder="Date (optional)"
               value={form.date || ''}
@@ -161,6 +226,14 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
               className="w-full px-4 py-3 rounded-lg border border-zinc-300 focus:border-zinc-950 focus:outline-none font-medium"
             />
           </div>
+
+          <input
+            type="text"
+            placeholder="Tags (optional, comma-separated)"
+            value={Array.isArray(form.tags) ? form.tags.join(', ') : ''}
+            onChange={(e) => setForm({ ...form, tags: parseTags(e.target.value) })}
+            className="w-full px-4 py-3 rounded-lg border border-zinc-300 focus:border-zinc-950 focus:outline-none font-medium"
+          />
 
           <input
             type="url"
@@ -216,8 +289,34 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
                     <p className="text-sm text-zinc-500 mt-1">
                       {[entry.app, entry.source, entry.date].filter(Boolean).join(' • ')}
                     </p>
+                    {(entry.topic || (entry.tags && entry.tags.length > 0)) && (
+                      <p className="text-xs text-zinc-400 mt-1">
+                        {[entry.topic ? `Topic: ${entry.topic}` : null, entry.tags?.length ? `Tags: ${entry.tags.join(', ')}` : null]
+                          .filter(Boolean)
+                          .join(' • ')}
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => document.getElementById(`bulk-upload-${entry.id}`)?.click()}
+                      className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-zinc-950"
+                      title="Upload CSV/XLSX"
+                    >
+                      <Upload size={18} />
+                    </button>
+                    <input
+                      id={`bulk-upload-${entry.id}`}
+                      type="file"
+                      className="hidden"
+                      accept=".csv,.tsv,.xlsx,.xls,.txt"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        void handleBulkUpload(entry, file);
+                        e.currentTarget.value = '';
+                      }}
+                    />
                     <button
                       onClick={() => handleEdit(entry)}
                       className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-zinc-950"
@@ -241,6 +340,33 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
                   <div className="bg-zinc-50 rounded-2xl p-4">
                     <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2">Entry Context</p>
                     <p className="text-sm text-zinc-700 whitespace-pre-wrap">{entry.entryContext}</p>
+                  </div>
+                )}
+
+                {entry.bulkImport && (
+                  <div className="bg-zinc-50 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Imported Dataset</p>
+                        <p className="text-sm text-zinc-700 mt-1">
+                          {entry.bulkImport.sourceFileName} • {entry.bulkImport.rowCount.toLocaleString()} lines
+                          {entry.bulkImport.selectedTextColumn ? ` • Column: ${entry.bulkImport.selectedTextColumn}` : ''}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => clearBulkImport(entry)}
+                        className="p-2 hover:bg-rose-50 rounded-lg text-zinc-500 hover:text-rose-600 shrink-0"
+                        title="Remove imported dataset"
+                      >
+                        <Trash size={18} />
+                      </button>
+                    </div>
+
+                    <textarea
+                      readOnly
+                      value={entry.bulkImport.items.join('\n')}
+                      className="w-full h-56 px-4 py-3 rounded-xl border border-zinc-200 bg-white text-zinc-900 font-mono text-xs leading-relaxed"
+                    />
                   </div>
                 )}
               </div>

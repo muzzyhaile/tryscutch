@@ -89,6 +89,18 @@ export interface MarketFeedback {
 // Feedback Library Types
 export type FeedbackSourceType = 'interview' | 'social' | 'support' | 'note';
 
+export interface FeedbackBulkImport {
+  sourceFileName: string;
+  importedAt: string;
+  kind: 'text' | 'table';
+  rowCount: number;
+  /** Extracted feedback items (1 per row/line) */
+  items: string[];
+  /** Optional hint for how items were extracted */
+  selectedTextColumn?: string;
+  detectedTextColumn?: string | null;
+}
+
 export interface FeedbackEntry {
   id: string;
   title: string;
@@ -99,6 +111,12 @@ export interface FeedbackEntry {
   date?: string; // ISO or yyyy-mm-dd
   content: string; // transcript / raw feedback
   entryContext?: string; // per-entry context/instructions
+  /** Optional grouping label to reference this entry/dataset as a single topic */
+  topic?: string;
+  /** Optional tags for quick reference/search (UI use) */
+  tags?: string[];
+  /** Optional bulk-imported dataset attached to this entry */
+  bulkImport?: FeedbackBulkImport;
   createdAt: string;
 }
 
