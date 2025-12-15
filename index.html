@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Clarity VoC - Minimal Customer Intelligence</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       body {
@@ -67,20 +67,16 @@
         }
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.559.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.1/",
-    "recharts": "https://esm.sh/recharts@^3.5.1",
-    "@google/genai": "https://esm.sh/@google/genai@^1.32.0",
-    "react/": "https://esm.sh/react@^19.2.1/",
-    "react": "https://esm.sh/react@^19.2.1",
-    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
-    "jspdf": "https://esm.sh/jspdf@2.5.1"
-  }
-}
-</script>
+
+    <script>
+      // Public runtime config (safe to expose; required for static hosting).
+      // Prefer setting VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY at build time,
+      // but this fallback prevents a broken build when those env vars are missing.
+      window.__CLARITY_PUBLIC_CONFIG__ = {
+        supabaseUrl: 'https://hxefkkruzdhxgsvgagsu.supabase.co',
+        supabasePublishableKey: 'sb_publishable_TU_j2YfW_WD94p5jvu_Msw_8TWrvm8R'
+      };
+    </script>
 </head>
   <body>
     <div id="root"></div>
