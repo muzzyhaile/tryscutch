@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { FeedbackEntry, FeedbackSourceType } from '../types';
 import { Plus, Edit2, Trash2, MessageSquare, Share2, Headphones, StickyNote, X, Save, Upload, Trash } from 'lucide-react';
 import { importFile, tableRowsToItems } from '../services/universalImport';
@@ -22,6 +22,10 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<FeedbackEntry>>({});
+  const [editingBulkImportId, setEditingBulkImportId] = useState<string | null>(null);
+  const [bulkImportDraftText, setBulkImportDraftText] = useState('');
+  const [isSectionDragOver, setIsSectionDragOver] = useState(false);
+  const sectionUploadRef = useRef<HTMLInputElement | null>(null);
 
   const filteredEntries = useMemo(() => {
     return entries
@@ -33,6 +37,11 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
     setIsEditing(false);
     setEditingId(null);
     setForm({});
+  };
+
+  const resetBulkImportEditor = () => {
+    setEditingBulkImportId(null);
+    setBulkImportDraftText('');
   };
 
   const handleSave = () => {
@@ -75,6 +84,43 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
     setForm(entry);
   };
 
+  const textToItems = (rawText: string): string[] => {
+    return rawText
+      .split(/\r?\n+/)
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+  };
+
+  const normalizeColumnName = (name: string): string => {
+    return name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
+  };
+
+  const pickColumn = (columns: string[], aliases: string[]): string | null => {
+    const normalized = columns.map(c => ({ raw: c, norm: normalizeColumnName(c) }));
+    for (const alias of aliases) {
+      const a = alias.toLowerCase();
+      const exact = normalized.find(c => c.norm === a);
+      if (exact) return exact.raw;
+    }
+    for (const alias of aliases) {
+      const a = alias.toLowerCase();
+      const includes = normalized.find(c => c.norm.includes(a));
+      if (includes) return includes.raw;
+    }
+    return null;
+  };
+
+  const parseTagsCell = (raw: string): string[] => {
+    return raw
+      .split(/[,;]+/)
+      .map(t => t.trim())
+      .filter(Boolean);
+  };
+
   const handleDelete = (id: string) => {
     if (confirm('Delete this entry?')) {
       onUpdate(entries.filter(e => e.id !== id));
@@ -95,10 +141,7 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
 
       const items = (() => {
         if (result.kind === 'text') {
-          return result.rawText
-            .split(/\r?\n/)
-            .map(l => l.trim())
-            .filter(l => l.length > 0);
+          return textToItems(result.rawText);
         }
 
         const selectedTextColumn = result.detectedTextColumn ?? result.columns[0] ?? '';
@@ -131,10 +174,123 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
     }
   };
 
+  const handleSectionUpload = async (file: File) => {
+    try {
+      const result = await importFile(file);
+
+      const now = new Date();
+      const createdAt = now.toISOString();
+      const base = now.getTime();
+
+      const newEntries: FeedbackEntry[] = (() => {
+        if (result.kind === 'text') {
+          const items = textToItems(result.rawText);
+          return items.map((content, idx) => {
+            const compact = content.replace(/\s+/g, ' ').trim();
+            const title = compact.length > 72 ? `${compact.slice(0, 72)}…` : compact || `Imported feedback ${idx + 1}`;
+            return {
+              id: `${base}-${idx}`,
+              title,
+              sourceType: activeTab,
+              app: '',
+              source: '',
+              url: '',
+              date: '',
+              content,
+              entryContext: '',
+              topic: '',
+              tags: [],
+              createdAt,
+            };
+          });
+        }
+
+        const contentCol = result.detectedTextColumn ?? pickColumn(result.columns, ['content', 'feedback', 'comment', 'message', 'text', 'body', 'note', 'description']) ?? result.columns[0] ?? '';
+        if (!contentCol) return [];
+
+        const titleCol = pickColumn(result.columns, ['title', 'subject', 'headline']);
+        const sourceCol = pickColumn(result.columns, ['source', 'channel', 'platform']);
+        const appCol = pickColumn(result.columns, ['app', 'product', 'application']);
+        const urlCol = pickColumn(result.columns, ['url', 'link']);
+        const dateCol = pickColumn(result.columns, ['date', 'time', 'timestamp', 'created at', 'created']);
+        const topicCol = pickColumn(result.columns, ['topic', 'category', 'area']);
+        const tagsCol = pickColumn(result.columns, ['tags', 'tag', 'labels', 'label']);
+
+        const items = tableRowsToItems(result.rows, contentCol);
+
+        return result.rows
+          .map((row, idx) => {
+            const content = (row[contentCol] ?? '').trim();
+            if (!content) return null;
+
+            const titleRaw = titleCol ? (row[titleCol] ?? '').trim() : '';
+            const compact = content.replace(/\s+/g, ' ').trim();
+            const title = titleRaw || (compact.length > 72 ? `${compact.slice(0, 72)}…` : compact || `Imported feedback ${idx + 1}`);
+
+            const source = sourceCol ? (row[sourceCol] ?? '').trim() : '';
+            const app = appCol ? (row[appCol] ?? '').trim() : '';
+            const url = urlCol ? (row[urlCol] ?? '').trim() : '';
+            const date = dateCol ? (row[dateCol] ?? '').trim() : '';
+            const topic = topicCol ? (row[topicCol] ?? '').trim() : '';
+            const tags = tagsCol ? parseTagsCell(row[tagsCol] ?? '') : [];
+
+            return {
+              id: `${base}-${idx}`,
+              title,
+              sourceType: activeTab,
+              app,
+              source,
+              url,
+              date,
+              content,
+              entryContext: '',
+              topic,
+              tags,
+              createdAt,
+            };
+          })
+          .filter(Boolean) as FeedbackEntry[];
+      })();
+
+      if (newEntries.length === 0) {
+        alert('No rows could be imported from that file. If this is a CSV/XLSX table, make sure it has a column with the feedback text.');
+        return;
+      }
+
+      onUpdate([...newEntries, ...entries]);
+    } catch (err) {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'Failed to import file.');
+    }
+  };
+
   const clearBulkImport = (entry: FeedbackEntry) => {
     if (!confirm('Remove the imported dataset from this entry?')) return;
+    if (editingBulkImportId === entry.id) resetBulkImportEditor();
     const updated: FeedbackEntry = { ...entry, bulkImport: undefined };
     onUpdate(entries.map(e => (e.id === entry.id ? updated : e)));
+  };
+
+  const startEditingBulkImport = (entry: FeedbackEntry) => {
+    if (!entry.bulkImport) return;
+    setEditingBulkImportId(entry.id);
+    setBulkImportDraftText(entry.bulkImport.items.join('\n'));
+  };
+
+  const saveEditedBulkImport = (entry: FeedbackEntry) => {
+    if (!entry.bulkImport) return;
+    const items = textToItems(bulkImportDraftText);
+    const updated: FeedbackEntry = {
+      ...entry,
+      bulkImport: {
+        ...entry.bulkImport,
+        items,
+        rowCount: items.length,
+        importedAt: new Date().toISOString(),
+      },
+    };
+    onUpdate(entries.map(e => (e.id === entry.id ? updated : e)));
+    resetBulkImportEditor();
   };
 
   const tabCount = (t: ActiveTab) => entries.filter(e => e.sourceType === t).length;
@@ -149,18 +305,116 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
           </p>
         </div>
         {!isEditing && (
-          <button
-            onClick={() => {
-              setIsEditing(true);
-              setEditingId(null);
-              setForm({ title: '', content: '' });
-            }}
-            className="bg-zinc-950 text-white px-6 py-3 rounded-xl text-base font-bold hover:bg-zinc-800 transition-colors flex items-center gap-2 shadow-lg"
-          >
-            <Plus size={20} /> New Entry
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => sectionUploadRef.current?.click()}
+              className="bg-white text-zinc-950 px-6 py-3 rounded-xl text-base font-bold hover:bg-zinc-50 transition-colors flex items-center gap-2 border border-zinc-200"
+              title={`Upload multiple rows into ${TAB_META[activeTab].label}`}
+            >
+              <Upload size={20} /> Upload
+            </button>
+            <button
+              onClick={() => {
+                setIsEditing(true);
+                setEditingId(null);
+                setForm({ title: '', content: '' });
+              }}
+              className="bg-zinc-950 text-white px-6 py-3 rounded-xl text-base font-bold hover:bg-zinc-800 transition-colors flex items-center gap-2 shadow-lg"
+            >
+              <Plus size={20} /> New Entry
+            </button>
+          </div>
         )}
       </div>
+
+      {!isEditing && (
+        <div
+          className={`rounded-3xl border-2 border-dashed p-8 transition-colors ${
+            isSectionDragOver ? 'border-zinc-950 bg-zinc-50' : 'border-zinc-200 bg-white'
+          }`}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsSectionDragOver(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsSectionDragOver(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsSectionDragOver(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsSectionDragOver(false);
+            const files = e.dataTransfer.files;
+            if (!files || files.length === 0) return;
+            if (files.length > 1) {
+              alert('Please upload one file at a time.');
+              return;
+            }
+            const file = files[0];
+            if (!file) return;
+            void handleSectionUpload(file);
+          }}
+          onClick={() => sectionUploadRef.current?.click()}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              sectionUploadRef.current?.click();
+            }
+          }}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-zinc-50 border border-zinc-200 flex items-center justify-center shrink-0">
+              <Upload size={22} className="text-zinc-700" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-lg font-bold text-zinc-950">
+                Drag & drop a CSV/XLSX/PDF/TXT to import into {TAB_META[activeTab].label}
+              </p>
+              <p className="text-sm text-zinc-500 mt-1">
+                One file at a time. CSV/XLSX creates 1 entry per row; TXT/PDF creates 1 entry per non-empty line.
+              </p>
+              <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="bg-white rounded-2xl border border-zinc-200 p-4">
+                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Supported files</p>
+                  <p className="text-sm text-zinc-700 mt-2">.csv, .tsv, .xlsx/.xls, .txt, .pdf</p>
+                  <p className="text-xs text-zinc-500 mt-2">
+                    If a file is huge, import may be slow because it runs in your browser.
+                  </p>
+                </div>
+                <div className="bg-white rounded-2xl border border-zinc-200 p-4">
+                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">CSV/XLSX columns</p>
+                  <p className="text-sm text-zinc-700 mt-2">
+                    Required: a feedback text column (e.g. “feedback”, “comment”, “content”). Optional: title, source, app/product, url, date,
+                    topic/category, tags/labels.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <input
+        ref={sectionUploadRef}
+        type="file"
+        className="hidden"
+        accept=".csv,.tsv,.xlsx,.xls,.txt,.pdf"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          void handleSectionUpload(file);
+          e.currentTarget.value = '';
+        }}
+      />
 
       <div className="flex flex-wrap gap-2 border-b border-zinc-100">
         {(Object.keys(TAB_META) as ActiveTab[]).map(tab => (
@@ -301,7 +555,7 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
                     <button
                       onClick={() => document.getElementById(`bulk-upload-${entry.id}`)?.click()}
                       className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-zinc-950"
-                      title="Upload CSV/XLSX"
+                      title="Upload CSV/XLSX/TXT/PDF"
                     >
                       <Upload size={18} />
                     </button>
@@ -309,7 +563,7 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
                       id={`bulk-upload-${entry.id}`}
                       type="file"
                       className="hidden"
-                      accept=".csv,.tsv,.xlsx,.xls,.txt"
+                      accept=".csv,.tsv,.xlsx,.xls,.txt,.pdf"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
@@ -353,20 +607,47 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
                           {entry.bulkImport.selectedTextColumn ? ` • Column: ${entry.bulkImport.selectedTextColumn}` : ''}
                         </p>
                       </div>
-                      <button
-                        onClick={() => clearBulkImport(entry)}
-                        className="p-2 hover:bg-rose-50 rounded-lg text-zinc-500 hover:text-rose-600 shrink-0"
-                        title="Remove imported dataset"
-                      >
-                        <Trash size={18} />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => (editingBulkImportId === entry.id ? resetBulkImportEditor() : startEditingBulkImport(entry))}
+                          className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-zinc-950"
+                          title={editingBulkImportId === entry.id ? 'Cancel editing dataset' : 'Edit imported dataset'}
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={() => clearBulkImport(entry)}
+                          className="p-2 hover:bg-rose-50 rounded-lg text-zinc-500 hover:text-rose-600"
+                          title="Remove imported dataset"
+                        >
+                          <Trash size={18} />
+                        </button>
+                      </div>
                     </div>
 
                     <textarea
-                      readOnly
-                      value={entry.bulkImport.items.join('\n')}
+                      readOnly={editingBulkImportId !== entry.id}
+                      value={editingBulkImportId === entry.id ? bulkImportDraftText : entry.bulkImport.items.join('\n')}
+                      onChange={(e) => setBulkImportDraftText(e.target.value)}
                       className="w-full h-56 px-4 py-3 rounded-xl border border-zinc-200 bg-white text-zinc-900 font-mono text-xs leading-relaxed"
                     />
+
+                    {editingBulkImportId === entry.id && (
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => resetBulkImportEditor()}
+                          className="px-4 py-2 rounded-lg font-bold border border-zinc-200 text-zinc-700 hover:bg-zinc-100"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => saveEditedBulkImport(entry)}
+                          className="px-4 py-2 rounded-lg font-bold bg-zinc-950 text-white hover:bg-zinc-800 flex items-center gap-2"
+                        >
+                          <Save size={16} /> Save Dataset
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

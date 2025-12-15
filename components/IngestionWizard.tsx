@@ -66,7 +66,7 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
     return input
       .split(/\r?\n/)
       .map(line => line.trim())
-      .filter(line => line.length > 10); 
+      .filter(line => line.length > 0);
   };
 
   const handleSubmit = () => {
@@ -113,7 +113,7 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
       libraryItems.push(`[${meta}]\n${entry.content}${ctx}`);
     }
 
-    const items = [...textItems, ...libraryItems].filter(i => i.trim().length > 10);
+    const items = [...textItems, ...libraryItems].filter(i => i.trim().length > 0);
     if (items.length === 0) {
       setError('No valid feedback items found. Paste data, upload a file, or select items from the Feedback Library.');
       return;

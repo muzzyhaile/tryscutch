@@ -113,13 +113,14 @@ export function tableRowsToItems(rows: TableRow[], textColumn: string): string[]
     .filter(v => v.length > 0);
 }
 
-export function parseCsvTextToTable(text: string): TableImportResult {
+export function parseCsvTextToTable(text: string, delimiter?: string): TableImportResult {
   const warnings: string[] = [];
 
   const parsed = Papa.parse<Record<string, unknown>>(text, {
     header: true,
     skipEmptyLines: true,
     dynamicTyping: false,
+    delimiter,
     transform: (v) => (typeof v === 'string' ? v.trim() : v),
   });
 
@@ -136,6 +137,7 @@ export function parseCsvTextToTable(text: string): TableImportResult {
       header: false,
       skipEmptyLines: true,
       dynamicTyping: false,
+      delimiter,
     });
 
     const rowsArr = Array.isArray(matrix.data) ? matrix.data : [];
@@ -240,7 +242,7 @@ export async function importFile(file: File): Promise<ImportResult> {
 
   if (ext === 'csv' || ext === 'tsv') {
     const text = await file.text();
-    return parseCsvTextToTable(text);
+    return parseCsvTextToTable(text, ext === 'tsv' ? '\t' : undefined);
   }
 
   if (ext === 'xlsx' || ext === 'xls') {
