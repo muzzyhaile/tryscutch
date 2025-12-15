@@ -25,6 +25,59 @@ Follow these steps to get Clarity running on your local machine.
 
 - [Node.js](https://nodejs.org/) (v18 or higher recommended)
 - A Google Gemini API Key ([Get one here](https://aistudio.google.com/app/apikey))
+- A Supabase project (Auth + Postgres) for persistence
+
+### Google OAuth (Supabase Auth)
+
+This app is configured to use **Google sign-in only** via Supabase Auth.
+
+#### 1) Create the Google OAuth Client
+
+In Google Cloud Console:
+
+- Go to **APIs & Services → Credentials → Create credentials → OAuth client ID**
+- **Application type**: Web application
+- **Name**: anything (e.g. “Clarity oauth”)
+
+**Authorized JavaScript origins** (browser origins):
+
+- `http://localhost:3000`
+- `https://YOUR_PRODUCTION_DOMAIN` (when you deploy)
+
+**Authorized redirect URIs**:
+
+- `https://YOUR_SUPABASE_PROJECT_REF.supabase.co/auth/v1/callback`
+
+Notes:
+
+- You must also configure the **OAuth consent screen** (brand name, support email, etc.).
+- If your Supabase project uses a **custom domain**, the redirect URI must use that custom domain instead.
+
+#### 2) Enable Google Provider in Supabase
+
+In Supabase Dashboard:
+
+- Go to **Authentication → Providers → Google**
+- Enable Google
+- Paste your **Google Client ID** and **Client Secret**
+
+Then go to **Authentication → URL Configuration**:
+
+- **Site URL**: `http://localhost:3000`
+- **Additional Redirect URLs**:
+   - `http://localhost:3000/*`
+   - `https://YOUR_PRODUCTION_DOMAIN/*`
+
+#### 3) Run locally
+
+This repo runs Vite on port `3000` (see `vite.config.ts`).
+
+```bash
+npm install
+npm run dev
+```
+
+Then click **Continue with Google** on the login screen.
 
 ### Installation
 
@@ -36,10 +89,23 @@ Follow these steps to get Clarity running on your local machine.
    ```
 
 3. **Configure Environment**:
-   Create a `.env.local` file in the root directory and add your Gemini API key:
+   Create a `.env.local` file in the root directory and add your keys:
    ```env
-   GEMINI_API_KEY=your_api_key_here
+   VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+   VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
    ```
+
+   Notes:
+   - New Supabase projects may show a **Publishable key** (starts with `sb_publishable_...`). Use that.
+   - This app also supports the legacy env var name `VITE_SUPABASE_ANON_KEY` for compatibility.
+   - Gemini runs server-side in a Supabase Edge Function. Set `GEMINI_API_KEY` in Supabase Dashboard → Edge Functions → Secrets (not in `.env.local`).
+
+   Deploy the Edge Function from this repo:
+   ```bash
+   supabase functions deploy gemini --project-ref <your-project-ref>
+   ```
+
+   See `.env.example` for the expected variables.
 
 4. **Run the app**:
    ```bash
@@ -53,7 +119,7 @@ Follow these steps to get Clarity running on your local machine.
 
 - **Framework**: React 19 + Vite
 - **Language**: TypeScript
-- **AI Model**: Google Gemini (via @google/genai)
+- **AI Model**: Google Gemini (via Supabase Edge Function)
 - **Styling**: Tailwind CSS + Lucide React
 - **Visualization**: Recharts
 - **Export**: html2canvas, jspdf

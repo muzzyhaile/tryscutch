@@ -60,7 +60,7 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
     }
 
     const newEntry: FeedbackEntry = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title: form.title,
       sourceType: activeTab,
       app: form.app || '',
@@ -189,7 +189,7 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
             const compact = content.replace(/\s+/g, ' ').trim();
             const title = compact.length > 72 ? `${compact.slice(0, 72)}…` : compact || `Imported feedback ${idx + 1}`;
             return {
-              id: `${base}-${idx}`,
+              id: crypto.randomUUID(),
               title,
               sourceType: activeTab,
               app: '',
@@ -235,7 +235,7 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
             const tags = tagsCol ? parseTagsCell(row[tagsCol] ?? '') : [];
 
             return {
-              id: `${base}-${idx}`,
+              id: crypto.randomUUID(),
               title,
               sourceType: activeTab,
               app,

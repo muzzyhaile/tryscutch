@@ -90,7 +90,7 @@ export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit 
     }));
 
     const response: FormResponse = {
-      id: `response-${Date.now()}`,
+      id: crypto.randomUUID(),
       formId: form.id,
       answers: formAnswers,
       submittedAt: new Date().toISOString(),

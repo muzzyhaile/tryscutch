@@ -10,6 +10,7 @@ import { FormBuilder } from './components/FormBuilder';
 import { FeedbackLibrary } from './components/FeedbackLibrary';
 import { PublicForm } from './components/PublicForm';
 import { ResponseViewer } from './components/ResponseViewer';
+import { AuthView } from './components/AuthView';
 import { Project, AnalysisResult } from './types';
 import { analyzeFeedbackBatch } from './services/geminiService';
 import { useProjects } from './hooks/useProjects';
@@ -17,15 +18,18 @@ import { useContextData } from './hooks/useContextData';
 import { useForms } from './hooks/useForms';
 import { useFeedbackLibrary } from './hooks/useFeedbackLibrary';
 import { useLanguage } from './hooks/useLanguage';
+import { useAuth } from './hooks/useAuth';
 import { Loader2, Plus, ArrowRight, LayoutGrid } from 'lucide-react';
 
 const App: React.FC = () => {
+  const { user, isLoading: authLoading, signOut } = useAuth();
+
   // Custom hooks for state management with persistence
-  const { projects, addProject, updateProject, deleteProject: removeProject } = useProjects();
-  const { contextData, setContextData } = useContextData();
-  const { forms, setForms, responses, setResponses, deleteResponse } = useForms();
-  const { entries: feedbackEntries, setEntries: setFeedbackEntries } = useFeedbackLibrary();
-  const { selectedLanguage, setSelectedLanguage } = useLanguage();
+  const { projects, addProject, updateProject, deleteProject: removeProject } = useProjects(user?.id);
+  const { contextData, setContextData } = useContextData(user?.id);
+  const { forms, setForms, responses, setResponses, deleteResponse } = useForms(user?.id);
+  const { entries: feedbackEntries, setEntries: setFeedbackEntries } = useFeedbackLibrary(user?.id);
+  const { selectedLanguage, setSelectedLanguage } = useLanguage(user?.id);
   
   // Local component state
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
@@ -70,6 +74,20 @@ const App: React.FC = () => {
     );
   }, [responses, setForms]);
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-white text-zinc-950 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-zinc-600 font-semibold">
+          <Loader2 className="animate-spin" /> Loading…
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthView />;
+  }
+
 
 
   const handleAnalyze = async (name: string, items: string[], context?: string) => {
@@ -77,7 +95,7 @@ const App: React.FC = () => {
     
     // Create Draft Project
     const newProject: Project = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       name,
       createdAt: new Date().toISOString(),
       status: 'analyzing',
@@ -264,6 +282,12 @@ const App: React.FC = () => {
               >
                 <div className="flex justify-between items-start mb-6">
                     <div className="h-14 w-14 bg-zinc-950 text-white rounded-2xl flex items-center justify-center font-bold text-2xl shadow-lg">
+            onLogout={() => {
+              void signOut().catch((err) => {
+                console.error(err);
+                alert(err instanceof Error ? err.message : 'Failed to sign out.');
+              });
+            }}
                         {p.name.charAt(0).toUpperCase()}
                     </div>
                     {p.status === 'analyzing' && <Loader2 className="animate-spin text-zinc-400" size={24} />}

@@ -11,6 +11,7 @@ interface LayoutProps {
   onFeedbackLibrary: () => void;
   onForms: () => void;
   onResponses: () => void;
+  onLogout: () => void;
   currentProjectName?: string;
 }
 
@@ -24,6 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({
   onFeedbackLibrary,
     onForms,
     onResponses,
+    onLogout,
     currentProjectName 
 }) => {
   return (
@@ -123,7 +125,11 @@ export const Layout: React.FC<LayoutProps> = ({
              </span>
           </div>
           <div className="flex items-center gap-4">
-              <button className="p-2 text-zinc-400 hover:text-zinc-950 transition-colors">
+              <button
+                onClick={onLogout}
+                className="p-2 text-zinc-400 hover:text-zinc-950 transition-colors"
+                title="Sign out"
+              >
                   <LogOut size={20} />
               </button>
           </div>

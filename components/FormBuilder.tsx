@@ -32,7 +32,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ forms, onUpdate }) => 
     setFormDescription(template.description);
     setQuestions(template.questions.map((q, i) => ({
       ...q,
-      id: `q-${Date.now()}-${i}`
+      id: `q-${crypto.randomUUID()}-${i}`
     })));
     setShowTemplates(false);
     setIsEditing(true);
@@ -48,7 +48,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ forms, onUpdate }) => 
 
   const handleAddQuestion = () => {
     const newQuestion: FormQuestion = {
-      id: `q-${Date.now()}`,
+      id: `q-${crypto.randomUUID()}`,
       type: 'long-text',
       question: '',
       required: false,
@@ -68,7 +68,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ forms, onUpdate }) => 
   const handleSaveForm = () => {
     if (!formName || questions.length === 0) return;
 
-    const formId = selectedForm?.id || `form-${Date.now()}`;
+    const formId = selectedForm?.id || crypto.randomUUID();
     const newForm: FeedbackForm = {
       id: formId,
       name: formName,

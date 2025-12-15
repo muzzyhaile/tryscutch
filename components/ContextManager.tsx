@@ -62,7 +62,7 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
       const content = await generateMarketResearch(researchCategory, researchQuery.trim(), contextSummary || undefined);
 
       const newResearch: MarketFeedback = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         name: (researchName || `${researchCategory.toUpperCase()} Research`).trim(),
         source: 'AI Research',
         content: `# ${researchName || `${researchCategory} research`}\n\n**Category:** ${researchCategory}\n\n**Request:** ${researchQuery.trim()}\n\n---\n\n${content}`,
@@ -99,7 +99,7 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
       });
     } else {
       const newICP: ICP = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         name: icpForm.name,
         description: icpForm.description,
         demographics: icpForm.demographics || '',
@@ -137,7 +137,7 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
       });
     } else {
       const newProduct: ProductInfo = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         name: productForm.name,
         description: productForm.description,
         features: productForm.features || '',
@@ -175,7 +175,7 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
       });
     } else {
       const newFeedback: MarketFeedback = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         name: feedbackForm.name,
         source: feedbackForm.source || '',
         content: feedbackForm.content,
@@ -212,7 +212,7 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
       });
     } else {
       const newPrinciple: ProductPrinciple = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         title: principleForm.title,
         description: principleForm.description,
         category: principleForm.category || 'other',
@@ -674,7 +674,7 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
                     onClick={() => {
                       const newPrinciple: ProductPrinciple = {
                         ...principle,
-                        id: `principle-${Date.now()}-${index}`,
+                        id: crypto.randomUUID(),
                         createdAt: new Date().toISOString()
                       };
                       onUpdate({
@@ -703,7 +703,7 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
                     setTimeout(() => {
                       const newPrinciple: ProductPrinciple = {
                         ...principle,
-                        id: `principle-${Date.now()}-${index}`,
+                        id: crypto.randomUUID(),
                         createdAt: new Date().toISOString()
                       };
                       onUpdate({
