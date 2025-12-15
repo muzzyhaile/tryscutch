@@ -292,7 +292,7 @@ export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit 
           )}
           {form.settings.showBranding && (
             <div className="mt-8 pt-6 border-t border-zinc-100">
-              <p className="text-xs text-zinc-400">Powered by <span className="font-bold text-zinc-950">Clarity</span></p>
+              <p className="text-xs text-zinc-400">Powered by <span className="font-bold text-zinc-950">Scutch</span></p>
             </div>
           )}
         </div>
@@ -368,7 +368,7 @@ export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit 
 
           {form.settings.showBranding && (
             <div className="mt-8 pt-6 border-t border-zinc-100 text-center">
-              <p className="text-xs text-zinc-400">Powered by <span className="font-bold text-zinc-950">Clarity</span></p>
+              <p className="text-xs text-zinc-400">Powered by <span className="font-bold text-zinc-950">Scutch</span></p>
             </div>
           )}
         </div>

@@ -1,12 +1,12 @@
 ﻿<div align="center">
   <div style="background-color: black; color: white; width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; margin: 0 auto 20px auto;">C</div>
-  <h1>Clarity</h1>
-  <p><strong>Turn raw feedback into clarity, in minutes.</strong></p>
+   <h1>Scutch</h1>
+   <p><strong>Scutch by Triscutch — turn raw feedback into clarity, in minutes.</strong></p>
 </div>
 
 <br />
 
-Clarity is a powerful Voice of Customer (VoC) tool designed to instantly analyze raw feedback. Upload your data and get automatic themes, sentiment analysis, and strategic insights powered by Google's Gemini AI—no complex integrations or setup required.
+Scutch is a powerful Voice of Customer (VoC) tool designed to instantly analyze raw feedback. Upload your data and get automatic themes, sentiment analysis, and strategic insights powered by Google's Gemini AI—no complex integrations or setup required.
 
 ## ✨ Features
 
@@ -19,7 +19,7 @@ Clarity is a powerful Voice of Customer (VoC) tool designed to instantly analyze
 
 ## 🚀 Run Locally
 
-Follow these steps to get Clarity running on your local machine.
+Follow these steps to get Scutch running on your local machine.
 
 ### Prerequisites
 
@@ -37,7 +37,7 @@ In Google Cloud Console:
 
 - Go to **APIs & Services → Credentials → Create credentials → OAuth client ID**
 - **Application type**: Web application
-- **Name**: anything (e.g. “Clarity oauth”)
+- **Name**: anything (e.g. “Scutch oauth”)
 
 **Authorized JavaScript origins** (browser origins):
 
@@ -128,7 +128,7 @@ Then click **Continue with Google** on the login screen.
 
 ## 🏗️ Architecture
 
-Clarity follows SOLID principles and clean architecture patterns:
+Scutch follows SOLID principles and clean architecture patterns:
 
 ### Design Patterns
 

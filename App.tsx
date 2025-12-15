@@ -22,6 +22,10 @@ import { useAuth } from './hooks/useAuth';
 import { Loader2, Plus, ArrowRight, LayoutGrid } from 'lucide-react';
 
 const App: React.FC = () => {
+  const initialPath = window.location.pathname;
+  const initialFormMatch = initialPath.match(/\/f\/([^/]+)/);
+  const initialFormIdParam = initialFormMatch ? initialFormMatch[1] : null;
+
   const { user, isLoading: authLoading, signOut } = useAuth();
 
   // Custom hooks for state management with persistence
@@ -36,8 +40,16 @@ const App: React.FC = () => {
   const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis' | 'settings' | 'billing' | 'context' | 'forms' | 'feedback' | 'responses'>('landing');
   const [isLoading, setIsLoading] = useState(false);
   const [isPrintMode, setIsPrintMode] = useState(false);
-  const [isFormView, setIsFormView] = useState(false);
-  const [formIdParam, setFormIdParam] = useState<string | null>(null);
+  const [isFormView, setIsFormView] = useState(Boolean(initialFormIdParam));
+  const [formIdParam, setFormIdParam] = useState<string | null>(initialFormIdParam);
+
+  // If a user arrives already authenticated, skip the marketing landing page.
+  useEffect(() => {
+    if (!user) return;
+    if (view === 'landing') {
+      setView('list');
+    }
+  }, [user, view]);
 
   // Check URL params on mount
   useEffect(() => {
@@ -74,6 +86,27 @@ const App: React.FC = () => {
     );
   }, [responses, setForms]);
 
+  const handleFormSubmit = (response: FormResponse) => {
+    setResponses(prev => [response, ...prev]);
+    
+    // Auto-import to analysis if enabled
+    const form = forms.find(f => f.id === response.formId);
+    if (form?.settings.autoImportToAnalysis) {
+      // Store for later import - could be enhanced to auto-create analysis
+      console.log('Auto-import enabled for response:', response.id);
+    }
+  }
+
+  // SPECIAL RENDER FOR FORM VIEW (public)
+  if (isFormView && formIdParam) {
+    return <PublicForm formId={formIdParam} forms={forms} onSubmit={handleFormSubmit} />;
+  }
+
+  // Render Landing Page completely separate from the App Layout (show before auth)
+  if (view === 'landing') {
+    return <LandingPage onStart={() => setView('list')} />;
+  }
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-white text-zinc-950 flex items-center justify-center">
@@ -87,8 +120,6 @@ const App: React.FC = () => {
   if (!user) {
     return <AuthView />;
   }
-
-
 
   const handleAnalyze = async (name: string, items: string[], context?: string) => {
     setIsLoading(true);
@@ -139,17 +170,6 @@ const App: React.FC = () => {
     }
   }
 
-  const handleFormSubmit = (response: FormResponse) => {
-    setResponses(prev => [response, ...prev]);
-    
-    // Auto-import to analysis if enabled
-    const form = forms.find(f => f.id === response.formId);
-    if (form?.settings.autoImportToAnalysis) {
-      // Store for later import - could be enhanced to auto-create analysis
-      console.log('Auto-import enabled for response:', response.id);
-    }
-  }
-
   const handleDeleteResponse = (id: string) => {
     deleteResponse(id);
   }
@@ -182,11 +202,6 @@ const App: React.FC = () => {
     await handleAnalyze(projectName, feedbackItems);
   }
 
-  // SPECIAL RENDER FOR FORM VIEW
-  if (isFormView && formIdParam) {
-    return <PublicForm formId={formIdParam} forms={forms} onSubmit={handleFormSubmit} />;
-  }
-
   // SPECIAL RENDER FOR PRINT MODE
   if (isPrintMode && currentProject) {
       return (
@@ -194,11 +209,6 @@ const App: React.FC = () => {
              <AnalysisView project={currentProject} onUpdateProject={handleUpdateProject} isPrintView={true} selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} />
         </div>
       );
-  }
-
-  // Render Landing Page completely separate from the App Layout
-  if (view === 'landing') {
-    return <LandingPage onStart={() => setView('list')} />;
   }
 
   const renderContent = () => {
@@ -282,12 +292,6 @@ const App: React.FC = () => {
               >
                 <div className="flex justify-between items-start mb-6">
                     <div className="h-14 w-14 bg-zinc-950 text-white rounded-2xl flex items-center justify-center font-bold text-2xl shadow-lg">
-            onLogout={() => {
-              void signOut().catch((err) => {
-                console.error(err);
-                alert(err instanceof Error ? err.message : 'Failed to sign out.');
-              });
-            }}
                         {p.name.charAt(0).toUpperCase()}
                     </div>
                     {p.status === 'analyzing' && <Loader2 className="animate-spin text-zinc-400" size={24} />}
@@ -319,6 +323,11 @@ const App: React.FC = () => {
 
   return (
     <Layout 
+      user={{
+        name: (user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? user?.email ?? 'Account') as string,
+        email: user?.email ?? undefined,
+        avatarUrl: (user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture) as string | undefined,
+      }}
       onNewProject={() => setView('new')}
       onGoHome={() => {
           setView('list');
@@ -357,6 +366,15 @@ const App: React.FC = () => {
           view === 'responses' ? 'Responses' :
           currentProject?.name
       }
+      onLogout={() => {
+        // Navigate back to the marketing page immediately.
+        setCurrentProject(null);
+        setView('landing');
+        void signOut().catch((err) => {
+          console.error(err);
+          alert(err instanceof Error ? err.message : 'Failed to sign out.');
+        });
+      }}
     >
       {renderContent()}
     </Layout>

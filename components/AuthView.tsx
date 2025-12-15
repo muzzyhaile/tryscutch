@@ -27,9 +27,9 @@ export const AuthView: React.FC = () => {
       <div className="w-full max-w-xl">
         <div className="border-2 border-zinc-100 rounded-[2.5rem] p-10 shadow-sm bg-white">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-zinc-950 rounded-2xl flex items-center justify-center text-white font-bold text-xl">C</div>
+            <div className="w-12 h-12 bg-zinc-950 rounded-2xl flex items-center justify-center text-white font-bold text-xl">S</div>
             <div>
-              <h1 className="text-4xl font-bold tracking-tighter">Clarity</h1>
+              <h1 className="text-4xl font-bold tracking-tighter">Scutch</h1>
               <p className="text-zinc-500 mt-1">Sign in with Google to access your workspace data.</p>
             </div>
           </div>

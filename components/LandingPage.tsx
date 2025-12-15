@@ -12,8 +12,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-zinc-100 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg">C</div>
-            <span className="font-bold text-xl tracking-tighter">Clarity</span>
+            <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg">S</div>
+            <span className="font-bold text-xl tracking-tighter">Scutch</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-bold text-zinc-600">
             <a href="#features" className="hover:text-black transition-colors">Features</a>
@@ -144,9 +144,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" className="py-24 px-6 bg-white">
+        <section id="how-it-works" className="py-24 px-6 bg-white">
           <div className="max-w-4xl mx-auto text-center mb-20">
-              <h2 className="text-4xl md:text-5xl font-bold tracking-tighter">Three steps to clarity</h2>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tighter">Three steps to clarity</h2>
           </div>
           <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 relative">
               {/* Connecting line */}
@@ -218,8 +218,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       <footer className="py-12 px-6 border-t border-zinc-200 bg-zinc-50">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
               <div className="flex items-center gap-3">
-                 <div className="w-8 h-8 bg-zinc-950 rounded-lg flex items-center justify-center text-white text-sm font-bold">C</div>
-                 <span className="font-bold text-lg tracking-tight text-zinc-950">Clarity</span>
+             <div className="w-8 h-8 bg-zinc-950 rounded-lg flex items-center justify-center text-white text-sm font-bold">S</div>
+             <span className="font-bold text-lg tracking-tight text-zinc-950">Scutch</span>
               </div>
               <div className="flex gap-8 text-sm font-bold text-zinc-400">
                   <a href="#" className="hover:text-black transition-colors">Privacy</a>
@@ -227,7 +227,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                   <a href="#" className="hover:text-black transition-colors">Twitter</a>
               </div>
               <div className="text-xs font-medium text-zinc-400">
-                  © 2024 Clarity VoC. All rights reserved.
+              © 2025 Triscutch. All rights reserved.
               </div>
           </div>
       </footer>
