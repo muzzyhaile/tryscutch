@@ -70,6 +70,82 @@ async function requireUser(req: Request) {
   return data.user ?? null;
 }
 
+function createAuthedSupabaseClient(params: { req: Request }) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const authHeader = params.req.headers.get("Authorization") ?? "";
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Missing SUPABASE_URL or SUPABASE_ANON_KEY in Edge Function env.");
+  }
+
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: authHeader,
+      },
+    },
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
+
+async function ensurePersonalOrgAndSubscription(params: { supabase: any; userId: string }) {
+  const { supabase, userId } = params;
+
+  // Personal org: org_id == user_id.
+  await supabase
+    .from("organizations")
+    .upsert({ id: userId, name: "Personal" }, { onConflict: "id" });
+
+  await supabase
+    .from("organization_members")
+    .upsert(
+      { org_id: userId, user_id: userId, role: "owner" },
+      { onConflict: "org_id,user_id" }
+    );
+
+  // Create a default Starter subscription if none exists.
+  // This insert is allowed by RLS only for plan_id='starter'. If it already exists, ignore duplicates.
+  const { error } = await supabase
+    .from("subscriptions")
+    .insert({ org_id: userId, plan_id: "starter", status: "active" });
+
+  if (error && !(String(error.code) === "23505" || String(error.message).toLowerCase().includes("duplicate"))) {
+    throw error;
+  }
+}
+
+function estimateCharsForAnalysis(params: { feedbackItems: string[]; context?: string }) {
+  const items = params.feedbackItems ?? [];
+  const itemsChars = items.reduce(
+    (sum, it) => sum + (typeof it === "string" ? it.length : 0),
+    0
+  );
+  const contextChars = typeof params.context === "string" ? params.context.length : 0;
+  return itemsChars + contextChars;
+}
+
+function quotaErrorMessage(error: any): string {
+  const raw = String(error?.message ?? "");
+  if (raw.includes("over_monthly_limit")) {
+    return "You’ve hit your monthly analysis limit. Upgrade your plan to continue.";
+  }
+  if (raw.includes("over_max_items_per_analysis")) {
+    return "This upload has too many items for your plan. Split it into smaller runs or upgrade.";
+  }
+  if (raw.includes("over_max_chars_per_analysis")) {
+    return "This analysis is too large for your plan. Reduce the amount of text or upgrade.";
+  }
+  if (raw.includes("missing_subscription")) {
+    return "Billing is not set up for this account yet. Open Billing & Plans and try again.";
+  }
+  return "Usage limit reached. Please upgrade your plan to continue.";
+}
+
 async function geminiGenerateText(params: {
   apiKey: string;
   model: string;
@@ -145,6 +221,9 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(401, { error: "Unauthorized" });
     }
 
+    const supabase = createAuthedSupabaseClient({ req });
+    await ensurePersonalOrgAndSubscription({ supabase, userId: user.id });
+
     const apiKey = Deno.env.get("GEMINI_API_KEY") ?? "";
     if (!apiKey) {
       return jsonResponse(500, { error: "Missing GEMINI_API_KEY secret" });
@@ -163,7 +242,24 @@ Deno.serve(async (req: Request) => {
       const feedbackItems = (body?.feedbackItems as string[] | undefined) ?? [];
       const context = (body?.context as string | undefined) ?? undefined;
 
-      const slicedItems = feedbackItems.slice(0, 500);
+      const chars = estimateCharsForAnalysis({ feedbackItems, context });
+      const { data: usageRow, error: usageErr } = await supabase.rpc(
+        "scutch_consume_monthly_usage",
+        {
+          p_org_id: user.id,
+          p_items_delta: feedbackItems.length,
+          p_chars_delta: chars,
+        }
+      );
+
+      if (usageErr) {
+        return jsonResponse(402, {
+          error: quotaErrorMessage(usageErr),
+          code: "quota_exceeded",
+        });
+      }
+
+      const slicedItems = feedbackItems;
       const feedbackText = slicedItems
         .map((item, i) => `[ID: ${i}] ${item}`)
         .join("\n");
@@ -228,6 +324,7 @@ Return ONLY valid JSON with this shape:
         clusters,
         topPriorities: data.topPriorities,
         totalItemsProcessed: slicedItems.length,
+        billing: Array.isArray(usageRow) ? usageRow[0] : usageRow,
       });
     }
 

@@ -13,7 +13,7 @@ import { ResponseViewer } from './components/ResponseViewer';
 import { AuthView } from './components/AuthView';
 import { Project, AnalysisResult } from './types';
 import { analyzeFeedbackBatch } from './services/geminiService';
-import { getActivePlan, importOptionsForUser, recordAnalysisUsage, validateAnalysisWithinPlan } from './lib/plans';
+import { PLAN_CATALOG, PlanId } from './lib/plans';
 import { useProjects } from './hooks/useProjects';
 import { useContextData } from './hooks/useContextData';
 import { useForms } from './hooks/useForms';
@@ -21,6 +21,8 @@ import { useFeedbackLibrary } from './hooks/useFeedbackLibrary';
 import { useLanguage } from './hooks/useLanguage';
 import { useAuth } from './hooks/useAuth';
 import { Loader2, Plus, ArrowRight, LayoutGrid } from 'lucide-react';
+import { supabase } from './lib/supabaseClient';
+import { QuotaExceededError } from './services/geminiService';
 
 const App: React.FC = () => {
   const initialPath = window.location.pathname;
@@ -43,6 +45,7 @@ const App: React.FC = () => {
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [isFormView, setIsFormView] = useState(Boolean(initialFormIdParam));
   const [formIdParam, setFormIdParam] = useState<string | null>(initialFormIdParam);
+  const [serverPlanId, setServerPlanId] = useState<PlanId>('starter');
 
   // If a user arrives already authenticated, skip the marketing landing page.
   useEffect(() => {
@@ -122,17 +125,65 @@ const App: React.FC = () => {
     return <AuthView />;
   }
 
+  // Keep a lightweight server-backed plan id for client-side UX checks.
+  // Real enforcement happens in the Edge Function + DB.
+  useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        // Bootstrap personal org + membership + starter subscription (RLS allows this).
+        await supabase.from('organizations').upsert({ id: user.id, name: 'Personal' }, { onConflict: 'id' });
+        await supabase
+          .from('organization_members')
+          .upsert({ org_id: user.id, user_id: user.id, role: 'owner' }, { onConflict: 'org_id,user_id' });
+        const insertRes = await supabase
+          .from('subscriptions')
+          .insert({ org_id: user.id, plan_id: 'starter', status: 'active' });
+        if (insertRes.error && String(insertRes.error.code) !== '23505') {
+          throw insertRes.error;
+        }
+
+        const { data: sub, error } = await supabase
+          .from('subscriptions')
+          .select('plan_id')
+          .eq('org_id', user.id)
+          .maybeSingle();
+        if (error) throw error;
+        if (!cancelled && sub?.plan_id && (sub.plan_id === 'starter' || sub.plan_id === 'pro')) {
+          setServerPlanId(sub.plan_id);
+        }
+      } catch {
+        // If billing tables aren't deployed yet, keep starter.
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
   const handleAnalyze = async (name: string, items: string[], context?: string) => {
-    const plan = getActivePlan(user?.id);
+    const plan = PLAN_CATALOG[serverPlanId];
     if (Number.isFinite(plan.limits.maxProjects) && projects.length >= plan.limits.maxProjects) {
       alert(`You have reached the ${plan.name} project limit (${plan.limits.maxProjects.toLocaleString()}). Upgrade your plan to create more projects.`);
       setView('billing');
       return;
     }
 
-    const validation = validateAnalysisWithinPlan({ userId: user?.id, items, context });
-    if (!validation.ok) {
-      alert(validation.message);
+    if (items.length > plan.limits.maxItemsPerAnalysis) {
+      alert(
+        `This plan allows up to ${plan.limits.maxItemsPerAnalysis.toLocaleString()} feedback items per analysis. You tried ${items.length.toLocaleString()}. Split the file or upgrade your plan.`
+      );
+      setView('billing');
+      return;
+    }
+
+    const totalChars = items.reduce((sum, it) => sum + (it?.length || 0), 0) + (context?.length || 0);
+    if (totalChars > plan.limits.maxCharsPerAnalysis) {
+      alert('This analysis is too large for your plan. Reduce the amount of text or upgrade your plan.');
       setView('billing');
       return;
     }
@@ -151,10 +202,6 @@ const App: React.FC = () => {
 
     try {
       const result: AnalysisResult = await analyzeFeedbackBatch(items, context);
-
-      // Record usage after a successful analysis to keep monthly caps enforceable.
-      const totalChars = items.reduce((sum, it) => sum + (it?.length || 0), 0) + (context?.length || 0);
-      recordAnalysisUsage({ userId: user?.id, items: items.length, chars: totalChars });
       
       const completedProject: Project = {
         ...newProject,
@@ -167,7 +214,12 @@ const App: React.FC = () => {
       setView('analysis');
     } catch (error) {
       console.error(error);
-      alert("Analysis failed. Please try again later or check your API key.");
+      if (error instanceof QuotaExceededError) {
+        alert(error.message);
+        setView('billing');
+      } else {
+        alert("Analysis failed. Please try again later or check your API key.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -238,7 +290,10 @@ const App: React.FC = () => {
           isLoading={isLoading}
           contextData={contextData}
           feedbackEntries={feedbackEntries}
-          importOptions={importOptionsForUser(user?.id)}
+          importOptions={{
+            maxBytes: PLAN_CATALOG[serverPlanId].limits.importMaxFileBytes,
+            maxTableRows: PLAN_CATALOG[serverPlanId].limits.importMaxTableRows,
+          }}
         />
       );
     }
@@ -275,7 +330,10 @@ const App: React.FC = () => {
         <FeedbackLibrary
           entries={feedbackEntries}
           onUpdate={setFeedbackEntries}
-          importOptions={importOptionsForUser(user?.id)}
+          importOptions={{
+            maxBytes: PLAN_CATALOG[serverPlanId].limits.importMaxFileBytes,
+            maxTableRows: PLAN_CATALOG[serverPlanId].limits.importMaxTableRows,
+          }}
         />
       );
     }

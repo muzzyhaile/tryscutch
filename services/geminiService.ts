@@ -4,12 +4,38 @@ import { AnalysisResult, Cluster, ProductRecommendation } from "../types";
 const FUNCTION_NAME = "gemini";
 const DEFAULT_MODEL = "gemini-2.5-flash";
 
+export class QuotaExceededError extends Error {
+  readonly code = 'quota_exceeded';
+  readonly status = 402;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'QuotaExceededError';
+  }
+}
+
+function tryParseJson(value: unknown): any {
+  if (value == null) return null;
+  if (typeof value === 'object') return value;
+  if (typeof value !== 'string') return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
 async function invokeGeminiFunction<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(FUNCTION_NAME, {
     body,
   });
 
   if (error) {
+    const status = (error as any)?.context?.status as number | undefined;
+    const parsedBody = tryParseJson((error as any)?.context?.body);
+    if (status === 402 && parsedBody?.code === 'quota_exceeded') {
+      throw new QuotaExceededError(parsedBody?.message ?? 'Quota exceeded. Please upgrade your plan.');
+    }
     throw new Error(error.message);
   }
 

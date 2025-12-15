@@ -3,17 +3,28 @@ import { BarChart3, CheckCircle2, ShieldCheck, UploadCloud, Users, Zap } from 'l
 import {
   PLAN_CATALOG,
   formatBytes,
-  loadSubscription,
-  loadUsage,
     Plan,
   PlanId,
-  saveSubscription,
-  SubscriptionState,
 } from '../lib/plans';
+import { supabase } from '../lib/supabaseClient';
 
 type BillingViewProps = {
   userId?: string;
   projectsCount: number;
+};
+
+type ServerSubscription = {
+    plan_id: 'starter' | 'pro';
+    status: string;
+    cancel_at_period_end: boolean | null;
+    current_period_end: string | null;
+};
+
+type ServerUsage = {
+    analyzed_items: number;
+    analyzed_chars: number;
+    imported_bytes: number;
+    month: string;
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -26,17 +37,90 @@ function pct(n: number, d: number) {
 }
 
 export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount }) => {
-  const [subscription, setSubscription] = useState<SubscriptionState>(() => loadSubscription(userId));
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [serverSub, setServerSub] = useState<ServerSubscription | null>(null);
+    const [serverUsage, setServerUsage] = useState<ServerUsage | null>(null);
+    const [isStartingCheckout, setIsStartingCheckout] = useState<PlanId | null>(null);
+    const [isStartingPortal, setIsStartingPortal] = useState(false);
 
-  useEffect(() => {
-    saveSubscription(userId, {
-      ...subscription,
-      seats: subscription.seats ?? PLAN_CATALOG[subscription.planId].limits.seatsIncluded,
-    });
-  }, [subscription, userId]);
+    const monthStart = useMemo(() => {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}-01`;
+    }, []);
 
-    const currentPlan = useMemo(() => PLAN_CATALOG[subscription.planId], [subscription.planId]);
-  const usage = useMemo(() => loadUsage(userId), [userId, subscription.planId]);
+    const monthKey = useMemo(() => monthStart.slice(0, 7), [monthStart]);
+
+    useEffect(() => {
+        if (!userId) return;
+
+        let cancelled = false;
+
+        const run = async () => {
+            setIsLoading(true);
+            setError(null);
+
+            try {
+                // Bootstrap personal org + membership + starter subscription (RLS allows this).
+                await supabase.from('organizations').upsert({ id: userId, name: 'Personal' }, { onConflict: 'id' });
+                await supabase
+                    .from('organization_members')
+                    .upsert({ org_id: userId, user_id: userId, role: 'owner' }, { onConflict: 'org_id,user_id' });
+
+                const insertRes = await supabase
+                    .from('subscriptions')
+                    .insert({ org_id: userId, plan_id: 'starter', status: 'active' });
+                // Ignore duplicates.
+                if (insertRes.error && String(insertRes.error.code) !== '23505') {
+                    throw insertRes.error;
+                }
+
+                const { data: sub, error: subErr } = await supabase
+                    .from('subscriptions')
+                    .select('plan_id,status,cancel_at_period_end,current_period_end')
+                    .eq('org_id', userId)
+                    .maybeSingle();
+                if (subErr) throw subErr;
+
+                const { data: usage, error: usageErr } = await supabase
+                    .from('usage_monthly')
+                    .select('analyzed_items,analyzed_chars,imported_bytes,month')
+                    .eq('org_id', userId)
+                    .eq('month', monthStart)
+                    .maybeSingle();
+                if (usageErr) throw usageErr;
+
+                if (cancelled) return;
+                setServerSub((sub as any) ?? null);
+                setServerUsage((usage as any) ?? null);
+            } catch (e) {
+                if (cancelled) return;
+                setError((e as Error)?.message ?? 'Failed to load billing');
+            } finally {
+                if (!cancelled) setIsLoading(false);
+            }
+        };
+
+        void run();
+        return () => {
+            cancelled = true;
+        };
+    }, [userId, monthStart]);
+
+    const planIdFromServer = (serverSub?.plan_id ?? 'starter') as PlanId;
+    const currentPlan = useMemo(() => PLAN_CATALOG[planIdFromServer], [planIdFromServer]);
+
+    const usage = useMemo(
+        () => ({
+            analyzedItems: serverUsage?.analyzed_items ?? 0,
+            analyzedChars: serverUsage?.analyzed_chars ?? 0,
+            importedBytes: serverUsage?.imported_bytes ?? 0,
+            monthKey,
+        }),
+        [serverUsage, monthKey]
+    );
 
     const plans = useMemo(() => Object.values(PLAN_CATALOG) as Plan[], []);
 
@@ -49,27 +133,68 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
   const monthlyItemsPct = pct(usage.analyzedItems, currentPlan.limits.monthlyItems);
 
   const seatsIncluded = currentPlan.limits.seatsIncluded;
-  const seats = subscription.seats ?? seatsIncluded;
+    const seats = seatsIncluded;
 
-  const selectPlan = (planId: PlanId) => {
-    if (planId === subscription.planId) return;
-    if (planId === 'enterprise') {
-      window.location.href = 'mailto:sales@triscutch.com?subject=Scutch%20Enterprise%20Plan';
-      return;
-    }
-    setSubscription({
-      planId,
-      updatedAt: new Date().toISOString(),
-      seats: PLAN_CATALOG[planId].limits.seatsIncluded,
-    });
-  };
+    const startCheckout = async (targetPlanId: PlanId) => {
+        if (!userId) return;
+        if (targetPlanId === planIdFromServer) return;
+        if (targetPlanId === 'enterprise') {
+            window.location.href = 'mailto:sales@triscutch.com?subject=Scutch%20Enterprise%20Plan';
+            return;
+        }
 
-    return (
+        setIsStartingCheckout(targetPlanId);
+        try {
+            const { data, error: fnErr } = await supabase.functions.invoke('stripe-checkout', {
+                body: {
+                    planId: targetPlanId,
+                    successUrl: `${window.location.origin}${window.location.pathname}?billing=success`,
+                    cancelUrl: `${window.location.origin}${window.location.pathname}?billing=cancel`,
+                },
+            });
+
+            if (fnErr) throw new Error(fnErr.message);
+            const url = (data as any)?.url as string | undefined;
+            if (!url) throw new Error('Missing checkout url');
+            window.location.href = url;
+        } catch (e) {
+            alert((e as Error)?.message ?? 'Failed to start checkout');
+        } finally {
+            setIsStartingCheckout(null);
+        }
+    };
+
+    const openPortal = async () => {
+        setIsStartingPortal(true);
+        try {
+            const { data, error: fnErr } = await supabase.functions.invoke('stripe-portal', {
+                body: {
+                    returnUrl: `${window.location.origin}${window.location.pathname}`,
+                },
+            });
+            if (fnErr) throw new Error(fnErr.message);
+            const url = (data as any)?.url as string | undefined;
+            if (!url) throw new Error('Missing portal url');
+            window.location.href = url;
+        } catch (e) {
+            alert((e as Error)?.message ?? 'Failed to open billing portal');
+        } finally {
+            setIsStartingPortal(false);
+        }
+    };
+
+        return (
         <div className="space-y-12 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="space-y-4 border-b border-zinc-100 pb-8">
                 <h1 className="text-5xl font-bold tracking-tighter text-zinc-950">Billing & Plans</h1>
                 <p className="text-xl text-zinc-500 font-light">Choose a plan with clear limits on uploads and AI usage.</p>
             </div>
+
+                        {isLoading ? (
+                            <div className="bg-white border border-zinc-100 rounded-3xl p-8 text-zinc-600">Loading billing…</div>
+                        ) : error ? (
+                            <div className="bg-white border border-rose-200 rounded-3xl p-8 text-rose-700">{error}</div>
+                        ) : null}
 
             {/* Current Plan */}
             <div className="bg-zinc-950 text-white p-10 rounded-[2.5rem] relative overflow-hidden shadow-2xl">
@@ -81,7 +206,19 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                             <div className="text-zinc-300 font-medium mt-2">{currentPlan.priceLabel}</div>
                             <div className="text-zinc-400 text-sm mt-3">Renews monthly • Usage resets monthly</div>
                         </div>
-                        <div className="px-4 py-2 bg-white/10 rounded-full text-xs font-bold uppercase tracking-widest">Active</div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="px-4 py-2 bg-white/10 rounded-full text-xs font-bold uppercase tracking-widest">
+                                                        {(serverSub?.status ?? 'active').toString().replace(/_/g, ' ')}
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={openPortal}
+                                                        disabled={isStartingPortal}
+                                                        className="px-5 py-2 bg-white text-zinc-950 font-bold rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-60"
+                                                    >
+                                                        {isStartingPortal ? 'Opening…' : 'Manage Billing'}
+                                                    </button>
+                                                </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -168,7 +305,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                 <h2 className="text-3xl font-bold text-zinc-950 tracking-tight mb-8">Plans</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {plans.map((plan) => {
-                        const isCurrent = plan.id === subscription.planId;
+                                                const isCurrent = plan.id === planIdFromServer;
                         const isPopular = Boolean(plan.popular);
                         const containerClassName = isCurrent
                             ? 'p-8 border-2 border-zinc-950 rounded-3xl bg-white relative overflow-hidden'
@@ -206,7 +343,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                                 ) : plan.id === 'enterprise' ? (
                                     <button
                                         type="button"
-                                        onClick={() => selectPlan('enterprise')}
+                                        onClick={() => startCheckout('enterprise')}
                                         className="w-full py-3 border-2 border-zinc-200 rounded-xl font-bold text-zinc-900 hover:bg-zinc-100 transition-colors"
                                     >
                                         Contact Sales
@@ -214,14 +351,15 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                                 ) : (
                                     <button
                                         type="button"
-                                        onClick={() => selectPlan(plan.id)}
+                                        onClick={() => startCheckout(plan.id)}
+                                        disabled={isStartingCheckout === plan.id}
                                         className={
                                             plan.id === 'pro'
-                                                ? 'w-full py-3 bg-zinc-950 text-white rounded-xl font-bold shadow-lg'
-                                                : 'w-full py-3 bg-white text-zinc-950 border-2 border-zinc-200 rounded-xl font-bold hover:bg-zinc-50 transition-colors'
+                                                ? 'w-full py-3 bg-zinc-950 text-white rounded-xl font-bold shadow-lg disabled:opacity-60'
+                                                : 'w-full py-3 bg-white text-zinc-950 border-2 border-zinc-200 rounded-xl font-bold hover:bg-zinc-50 transition-colors disabled:opacity-60'
                                         }
                                     >
-                                        Upgrade to {plan.name}
+                                        {isStartingCheckout === plan.id ? 'Redirecting…' : `Upgrade to ${plan.name}`}
                                     </button>
                                 )}
                             </div>

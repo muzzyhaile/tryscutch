@@ -1,0 +1,2 @@
+# Stripe webhooks are sent by Stripe (no Supabase JWT), so JWT verification must be disabled.
+verify_jwt = false
