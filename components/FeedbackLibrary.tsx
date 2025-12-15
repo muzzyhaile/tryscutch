@@ -1,11 +1,12 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { FeedbackEntry, FeedbackSourceType } from '../types';
 import { Plus, Edit2, Trash2, MessageSquare, Share2, Headphones, StickyNote, X, Save, Upload, Trash } from 'lucide-react';
-import { importFile, tableRowsToItems } from '../services/universalImport';
+import { importFile, ImportOptions, tableRowsToItems } from '../services/universalImport';
 
 interface FeedbackLibraryProps {
   entries: FeedbackEntry[];
   onUpdate: (entries: FeedbackEntry[]) => void;
+  importOptions?: ImportOptions;
 }
 
 type ActiveTab = FeedbackSourceType;
@@ -17,7 +18,7 @@ const TAB_META: Record<ActiveTab, { label: string; icon: React.ReactNode }> = {
   note: { label: 'Notes', icon: <StickyNote size={20} /> },
 };
 
-export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpdate }) => {
+export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpdate, importOptions }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('interview');
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -137,7 +138,7 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
 
   const handleBulkUpload = async (entry: FeedbackEntry, file: File) => {
     try {
-      const result = await importFile(file);
+      const result = await importFile(file, importOptions);
 
       const items = (() => {
         if (result.kind === 'text') {
@@ -176,7 +177,7 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
 
   const handleSectionUpload = async (file: File) => {
     try {
-      const result = await importFile(file);
+      const result = await importFile(file, importOptions);
 
       const now = new Date();
       const createdAt = now.toISOString();

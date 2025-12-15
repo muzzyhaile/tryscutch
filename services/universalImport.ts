@@ -30,6 +30,17 @@ export interface TableImportResult extends ImportResultBase {
 
 export type ImportResult = TextImportResult | TableImportResult;
 
+export interface ImportOptions {
+  maxBytes?: number;
+  maxTableRows?: number;
+}
+
+const DEFAULT_IMPORT_OPTIONS: Required<ImportOptions> = {
+  // Hard safety cap to prevent runaway parsing/memory usage.
+  maxBytes: 10 * 1024 * 1024,
+  maxTableRows: 25_000,
+};
+
 const TEXTY_COLUMN_HINTS = [
   'feedback',
   'comment',
@@ -237,17 +248,39 @@ function extOf(filename: string): string {
   return idx >= 0 ? filename.slice(idx + 1).toLowerCase() : '';
 }
 
-export async function importFile(file: File): Promise<ImportResult> {
+export async function importFile(file: File, options?: ImportOptions): Promise<ImportResult> {
+  const effective: Required<ImportOptions> = {
+    ...DEFAULT_IMPORT_OPTIONS,
+    ...(options ?? {}),
+  };
+
+  if (!Number.isFinite(file.size) || file.size <= 0) {
+    throw new Error('That file appears to be empty.');
+  }
+
+  if (file.size > effective.maxBytes) {
+    const mb = (effective.maxBytes / (1024 * 1024)).toFixed(0);
+    throw new Error(`File is too large. Max size is ${mb}MB for your plan.`);
+  }
+
   const ext = extOf(file.name);
 
   if (ext === 'csv' || ext === 'tsv') {
     const text = await file.text();
-    return parseCsvTextToTable(text, ext === 'tsv' ? '\t' : undefined);
+    const table = parseCsvTextToTable(text, ext === 'tsv' ? '\t' : undefined);
+    if (table.rows.length > effective.maxTableRows) {
+      throw new Error(`This file has ${table.rows.length.toLocaleString()} rows. Max supported is ${effective.maxTableRows.toLocaleString()} rows for your plan.`);
+    }
+    return table;
   }
 
   if (ext === 'xlsx' || ext === 'xls') {
     const buffer = await file.arrayBuffer();
-    return parseXlsxArrayBufferToTable(buffer);
+    const table = parseXlsxArrayBufferToTable(buffer);
+    if (table.rows.length > effective.maxTableRows) {
+      throw new Error(`This file has ${table.rows.length.toLocaleString()} rows. Max supported is ${effective.maxTableRows.toLocaleString()} rows for your plan.`);
+    }
+    return table;
   }
 
   if (ext === 'pdf') {

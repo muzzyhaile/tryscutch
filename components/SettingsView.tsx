@@ -1,7 +1,11 @@
 import React from 'react';
-import { User, Lock, Trash2, Bell, Save } from 'lucide-react';
+import { User, Lock, Trash2, Bell, Save, CreditCard } from 'lucide-react';
 
-export const SettingsView: React.FC = () => {
+type SettingsViewProps = {
+    onBilling?: () => void;
+};
+
+export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling }) => {
   return (
     <div className="space-y-12 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-4 border-b border-zinc-100 pb-8">
@@ -84,6 +88,30 @@ export const SettingsView: React.FC = () => {
                Change Password
            </button>
         </section>
+
+                {/* Billing */}
+                <section className="space-y-6 pt-8 border-t border-zinc-100">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-3 bg-zinc-100 rounded-xl">
+                            <CreditCard className="w-6 h-6 text-zinc-950" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-zinc-950 tracking-tight">Billing & Plans</h2>
+                    </div>
+
+                    <div className="p-6 rounded-3xl border border-zinc-100 bg-zinc-50/50 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <h3 className="font-bold text-zinc-900 text-lg">Manage subscription</h3>
+                            <p className="text-zinc-500">View plans, invoices, and payment method.</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={onBilling}
+                            className="px-6 py-4 bg-zinc-950 text-white font-bold rounded-2xl hover:bg-zinc-800 transition-colors"
+                        >
+                            Open Billing
+                        </button>
+                    </div>
+                </section>
 
         {/* Danger Zone */}
         <section className="space-y-6 pt-8 border-t border-zinc-100">

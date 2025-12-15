@@ -115,6 +115,14 @@ export const Layout: React.FC<LayoutProps> = ({
               <Settings size={20} className="group-hover:scale-110 transition-transform"/>
               Settings
             </button>
+
+            <button 
+                onClick={onBilling}
+                className="group flex items-center gap-4 w-full px-4 py-3 text-base font-semibold text-zinc-500 rounded-xl hover:bg-white hover:text-zinc-950 hover:shadow-sm transition-all text-left border border-transparent hover:border-zinc-200"
+            >
+              <CreditCard size={20} className="group-hover:scale-110 transition-transform"/>
+              Billing & Plans
+            </button>
             
             <div className="px-4 py-2 text-xs font-bold text-zinc-400 uppercase tracking-widest mt-8">Context Library</div>
             <button 

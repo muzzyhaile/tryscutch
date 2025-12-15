@@ -13,6 +13,7 @@ import { ResponseViewer } from './components/ResponseViewer';
 import { AuthView } from './components/AuthView';
 import { Project, AnalysisResult } from './types';
 import { analyzeFeedbackBatch } from './services/geminiService';
+import { getActivePlan, importOptionsForUser, recordAnalysisUsage, validateAnalysisWithinPlan } from './lib/plans';
 import { useProjects } from './hooks/useProjects';
 import { useContextData } from './hooks/useContextData';
 import { useForms } from './hooks/useForms';
@@ -122,6 +123,20 @@ const App: React.FC = () => {
   }
 
   const handleAnalyze = async (name: string, items: string[], context?: string) => {
+    const plan = getActivePlan(user?.id);
+    if (Number.isFinite(plan.limits.maxProjects) && projects.length >= plan.limits.maxProjects) {
+      alert(`You have reached the ${plan.name} project limit (${plan.limits.maxProjects.toLocaleString()}). Upgrade your plan to create more projects.`);
+      setView('billing');
+      return;
+    }
+
+    const validation = validateAnalysisWithinPlan({ userId: user?.id, items, context });
+    if (!validation.ok) {
+      alert(validation.message);
+      setView('billing');
+      return;
+    }
+
     setIsLoading(true);
     
     // Create Draft Project
@@ -136,6 +151,10 @@ const App: React.FC = () => {
 
     try {
       const result: AnalysisResult = await analyzeFeedbackBatch(items, context);
+
+      // Record usage after a successful analysis to keep monthly caps enforceable.
+      const totalChars = items.reduce((sum, it) => sum + (it?.length || 0), 0) + (context?.length || 0);
+      recordAnalysisUsage({ userId: user?.id, items: items.length, chars: totalChars });
       
       const completedProject: Project = {
         ...newProject,
@@ -213,7 +232,15 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (view === 'new') {
-      return <IngestionWizard onAnalyze={handleAnalyze} isLoading={isLoading} contextData={contextData} feedbackEntries={feedbackEntries} />;
+      return (
+        <IngestionWizard
+          onAnalyze={handleAnalyze}
+          isLoading={isLoading}
+          contextData={contextData}
+          feedbackEntries={feedbackEntries}
+          importOptions={importOptionsForUser(user?.id)}
+        />
+      );
     }
 
     if (view === 'analysis' && currentProject) {
@@ -221,11 +248,18 @@ const App: React.FC = () => {
     }
 
     if (view === 'settings') {
-      return <SettingsView />;
+      return (
+        <SettingsView
+          onBilling={() => {
+            setView('billing');
+            setCurrentProject(null);
+          }}
+        />
+      );
     }
 
     if (view === 'billing') {
-      return <BillingView />;
+      return <BillingView userId={user?.id} projectsCount={projects.length} />;
     }
 
     if (view === 'context') {
@@ -237,7 +271,13 @@ const App: React.FC = () => {
     }
 
     if (view === 'feedback') {
-      return <FeedbackLibrary entries={feedbackEntries} onUpdate={setFeedbackEntries} />;
+      return (
+        <FeedbackLibrary
+          entries={feedbackEntries}
+          onUpdate={setFeedbackEntries}
+          importOptions={importOptionsForUser(user?.id)}
+        />
+      );
     }
 
     if (view === 'responses') {

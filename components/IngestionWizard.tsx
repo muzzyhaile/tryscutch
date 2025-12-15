@@ -1,16 +1,17 @@
 import React, { useState, useRef } from 'react';
 import { Upload, ArrowRight, Loader2, AlertCircle, ChevronDown, ChevronUp, FileText, Keyboard, Check } from 'lucide-react';
 import { ContextData, FeedbackEntry } from '../types';
-import { importFile, tableRowsToItems, ImportResult } from '../services/universalImport';
+import { importFile, tableRowsToItems, ImportOptions, ImportResult } from '../services/universalImport';
 
 interface IngestionWizardProps {
   onAnalyze: (name: string, data: string[], context?: string) => void;
   isLoading: boolean;
   contextData: ContextData;
   feedbackEntries: FeedbackEntry[];
+  importOptions?: ImportOptions;
 }
 
-export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isLoading, contextData, feedbackEntries }) => {
+export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isLoading, contextData, feedbackEntries, importOptions }) => {
   const [mode, setMode] = useState<'upload' | 'paste'>('paste');
   const [textInput, setTextInput] = useState('');
   const [projectName, setProjectName] = useState('');
@@ -41,7 +42,7 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
     setError(null);
     setIsParsingFile(true);
     try {
-      const result = await importFile(file);
+      const result = await importFile(file, importOptions);
       setImportResult(result);
 
       if (result.kind === 'text') {
