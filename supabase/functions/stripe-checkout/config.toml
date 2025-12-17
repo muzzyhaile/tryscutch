@@ -1,0 +1,3 @@
+# Allow browser CORS preflight (OPTIONS) without JWT.
+# We still enforce auth inside the function via supabase.auth.getUser().
+verify_jwt = false
