@@ -36,6 +36,21 @@ async function invokeGeminiFunction<T>(body: Record<string, unknown>): Promise<T
     if (status === 402 && parsedBody?.code === 'quota_exceeded') {
       throw new QuotaExceededError(parsedBody?.message ?? 'Quota exceeded. Please upgrade your plan.');
     }
+
+    // Prefer richer details when the Edge Function returned a structured error body.
+    const bodyMessage =
+      (typeof parsedBody?.error === 'string' && parsedBody.error) ||
+      (typeof parsedBody?.message === 'string' && parsedBody.message) ||
+      null;
+
+    if (status && bodyMessage) {
+      throw new Error(`Edge Function error (${status}): ${bodyMessage}`);
+    }
+
+    if (status) {
+      throw new Error(`Edge Function error (${status}): ${error.message}`);
+    }
+
     throw new Error(error.message);
   }
 

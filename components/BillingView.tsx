@@ -64,10 +64,15 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
 
             try {
                 // Bootstrap personal org + membership + starter subscription (RLS allows this).
-                await supabase.from('organizations').upsert({ id: userId, name: 'Personal' }, { onConflict: 'id' });
+                await supabase
+                    .from('organizations')
+                    .upsert({ id: userId, name: 'Personal' }, { onConflict: 'id', ignoreDuplicates: true });
                 await supabase
                     .from('organization_members')
-                    .upsert({ org_id: userId, user_id: userId, role: 'owner' }, { onConflict: 'org_id,user_id' });
+                    .upsert(
+                        { org_id: userId, user_id: userId, role: 'owner' },
+                        { onConflict: 'org_id,user_id', ignoreDuplicates: true }
+                    );
 
                 const insertRes = await supabase
                     .from('subscriptions')

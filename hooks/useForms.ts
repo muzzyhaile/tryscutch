@@ -24,13 +24,11 @@ type FormRow = {
 
 type ResponseRow = {
   id: string;
-  user_id: string;
   form_id: string;
   submitted_at: string;
   respondent_email: string | null;
   answers: any;
   imported: boolean;
-  created_at: string;
 };
 
 function isUuid(value: string): boolean {
@@ -88,7 +86,6 @@ function rowToResponse(row: ResponseRow): FormResponse {
 function responseToUpsertRow(userId: string, response: FormResponse) {
   return {
     id: response.id,
-    user_id: userId,
     form_id: response.formId,
     submitted_at: response.submittedAt,
     respondent_email: response.respondentEmail ?? null,
@@ -132,20 +129,39 @@ export function useForms(userId?: string) {
 
     let isMounted = true;
     (async () => {
-      const [formsRes, responsesRes] = await Promise.all([
-        supabase.from('forms').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-        supabase.from('form_responses').select('*').eq('user_id', userId).order('submitted_at', { ascending: false }),
-      ]);
+      const formsRes = await supabase
+        .from('forms')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
       if (!isMounted) return;
 
-      if (formsRes.error || responsesRes.error) {
-        console.error(formsRes.error ?? responsesRes.error);
+      if (formsRes.error) {
+        console.error(formsRes.error);
         setIsLoadedFromRemote(false);
         return;
       }
 
-      const remoteResponses = (responsesRes.data as ResponseRow[]).map(rowToResponse);
+      const formIds = (formsRes.data as FormRow[]).map((f) => f.id);
+      const responsesRes =
+        formIds.length > 0
+          ? await supabase
+              .from('form_responses')
+              .select('*')
+              .in('form_id', formIds)
+              .order('submitted_at', { ascending: false })
+          : ({ data: [], error: null } as const);
+
+      if (!isMounted) return;
+
+      if ((responsesRes as any).error) {
+        console.error((responsesRes as any).error);
+        setIsLoadedFromRemote(false);
+        return;
+      }
+
+      const remoteResponses = ((responsesRes as any).data as ResponseRow[]).map(rowToResponse);
       const responseCountByFormId = new Map<string, number>();
       for (const r of remoteResponses) {
         responseCountByFormId.set(r.formId, (responseCountByFormId.get(r.formId) ?? 0) + 1);
@@ -273,7 +289,6 @@ export function useForms(userId?: string) {
         const { error } = await supabase
           .from('form_responses')
           .delete()
-          .eq('user_id', userId)
           .in('id', removedIds);
         if (error) console.error(error);
       }

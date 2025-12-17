@@ -99,13 +99,13 @@ async function ensurePersonalOrgAndSubscription(params: { supabase: any; userId:
   // Personal org: org_id == user_id.
   await supabase
     .from("organizations")
-    .upsert({ id: userId, name: "Personal" }, { onConflict: "id" });
+    .upsert({ id: userId, name: "Personal" }, { onConflict: "id", ignoreDuplicates: true });
 
   await supabase
     .from("organization_members")
     .upsert(
       { org_id: userId, user_id: userId, role: "owner" },
-      { onConflict: "org_id,user_id" }
+      { onConflict: "org_id,user_id", ignoreDuplicates: true }
     );
 
   // Create a default Starter subscription if none exists.

@@ -34,7 +34,7 @@ export function useLanguage(userId?: string) {
       const { data, error } = await supabase
         .from('profiles')
         .select('selected_language')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .maybeSingle();
 
       if (!isMounted) return;
@@ -57,10 +57,10 @@ export function useLanguage(userId?: string) {
       const stored = storage.get<SupportedLanguage>(STORAGE_KEYS.LANGUAGE) ?? 'en';
       await supabase.from('profiles').upsert(
         {
-          id: userId,
+          user_id: userId,
           selected_language: stored,
         } as any,
-        { onConflict: 'id' }
+        { onConflict: 'user_id' }
       );
 
       skipNextSyncRef.current = true;
@@ -85,10 +85,10 @@ export function useLanguage(userId?: string) {
       .from('profiles')
       .upsert(
         {
-          id: userId,
+          user_id: userId,
           selected_language: selectedLanguage,
         } as any,
-        { onConflict: 'id' }
+        { onConflict: 'user_id' }
       )
       .then(({ error }) => {
         if (error) console.error(error);

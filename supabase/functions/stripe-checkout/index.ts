@@ -89,14 +89,22 @@ function resolvePriceId(planId: PlanId): string {
 
 async function ensurePersonalOrgAndSubscription(params: { supabase: any; userId: string }) {
   const { supabase, userId } = params;
-  await supabase.from("organizations").upsert({ id: userId, name: "Personal" }, { onConflict: "id" });
+  await supabase
+    .from("organizations")
+    .upsert({ id: userId, name: "Personal" }, { onConflict: "id", ignoreDuplicates: true });
   await supabase
     .from("organization_members")
-    .upsert({ org_id: userId, user_id: userId, role: "owner" }, { onConflict: "org_id,user_id" });
+    .upsert(
+      { org_id: userId, user_id: userId, role: "owner" },
+      { onConflict: "org_id,user_id", ignoreDuplicates: true }
+    );
 
   const { error } = await supabase
     .from("subscriptions")
-    .insert({ org_id: userId, plan_id: "starter", status: "active" });
+    .upsert(
+      { org_id: userId, plan_id: "starter", status: "active" },
+      { onConflict: "org_id", ignoreDuplicates: true }
+    );
 
   if (error && !(String(error.code) === "23505" || String(error.message).toLowerCase().includes("duplicate"))) {
     throw error;
