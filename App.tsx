@@ -116,12 +116,12 @@ const App: React.FC = () => {
             { org_id: userId, user_id: userId, role: 'owner' },
             { onConflict: 'org_id,user_id', ignoreDuplicates: true }
           );
-        const insertRes = await supabase
+        await supabase
           .from('subscriptions')
-          .insert({ org_id: userId, plan_id: 'starter', status: 'active' });
-        if (insertRes.error && String(insertRes.error.code) !== '23505') {
-          throw insertRes.error;
-        }
+          .upsert(
+            { org_id: userId, plan_id: 'starter', status: 'active' },
+            { onConflict: 'org_id', ignoreDuplicates: true }
+          );
 
         const { data: sub, error } = await supabase
           .from('subscriptions')

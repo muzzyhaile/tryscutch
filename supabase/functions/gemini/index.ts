@@ -93,32 +93,57 @@ function createAuthedSupabaseClient(params: { req: Request }) {
   });
 }
 
-async function ensurePersonalOrgAndSubscription(params: { supabase: any; userId: string }) {
-  const { supabase, userId } = params;
+function createServiceSupabaseClient() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in Edge Function env.");
+  }
+
+  return createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
+
+async function ensurePersonalOrgAndSubscription(params: { supabaseAdmin: any; userId: string }) {
+  const { supabaseAdmin, userId } = params;
 
   // Personal org: org_id == user_id.
-  await supabase
+  const { error: orgErr } = await supabaseAdmin
     .from("organizations")
     .upsert({ id: userId, name: "Personal" }, { onConflict: "id", ignoreDuplicates: true });
+  if (orgErr) {
+    throw new Error(`bootstrap organizations failed: ${orgErr.message ?? String(orgErr)}`);
+  }
 
-  await supabase
+  const { error: memberErr } = await supabaseAdmin
     .from("organization_members")
     .upsert(
       { org_id: userId, user_id: userId, role: "owner" },
       { onConflict: "org_id,user_id", ignoreDuplicates: true }
     );
+  if (memberErr) {
+    throw new Error(
+      `bootstrap organization_members failed: ${memberErr.message ?? String(memberErr)}`
+    );
+  }
 
   // Create a default Starter subscription if none exists.
-  // This write is allowed by RLS only for plan_id='starter'. If it already exists, ignore duplicates.
-  const { error } = await supabase
+  // (Use admin client to avoid RLS/bootstrapping failures; still only writes starter.)
+  const { error: subErr } = await supabaseAdmin
     .from("subscriptions")
     .upsert(
       { org_id: userId, plan_id: "starter", status: "active" },
       { onConflict: "org_id", ignoreDuplicates: true }
     );
 
-  if (error && !(String(error.code) === "23505" || String(error.message).toLowerCase().includes("duplicate"))) {
-    throw error;
+  if (subErr) {
+    throw new Error(`bootstrap subscriptions failed: ${subErr.message ?? String(subErr)}`);
   }
 }
 
@@ -225,7 +250,8 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createAuthedSupabaseClient({ req });
-    await ensurePersonalOrgAndSubscription({ supabase, userId: user.id });
+    const supabaseAdmin = createServiceSupabaseClient();
+    await ensurePersonalOrgAndSubscription({ supabaseAdmin, userId: user.id });
 
     const apiKey = Deno.env.get("GEMINI_API_KEY") ?? "";
     if (!apiKey) {
