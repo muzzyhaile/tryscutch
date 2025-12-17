@@ -49,7 +49,7 @@ export const PLAN_CATALOG: Record<PlanId, Plan> = {
       maxProjects: 10,
       maxItemsPerAnalysis: 1000,
       maxCharsPerAnalysis: 400_000,
-      monthlyItems: 10_000,
+      monthlyItems: 1_000,
       importMaxFileBytes: 10 * 1024 * 1024,
       importMaxTableRows: 10_000,
       seatsIncluded: 1,
