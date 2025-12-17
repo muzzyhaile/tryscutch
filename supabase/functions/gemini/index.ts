@@ -174,6 +174,16 @@ function quotaErrorMessage(error: any): string {
   return "Usage limit reached. Please upgrade your plan to continue.";
 }
 
+function isQuotaError(error: any): boolean {
+  const raw = String(error?.message ?? "");
+  return (
+    raw.includes("over_monthly_limit") ||
+    raw.includes("over_max_items_per_analysis") ||
+    raw.includes("over_max_chars_per_analysis") ||
+    raw.includes("missing_subscription")
+  );
+}
+
 async function geminiGenerateText(params: {
   apiKey: string;
   model: string;
@@ -282,9 +292,19 @@ Deno.serve(async (req: Request) => {
       );
 
       if (usageErr) {
-        return jsonResponse(402, {
-          error: quotaErrorMessage(usageErr),
-          code: "quota_exceeded",
+        if (isQuotaError(usageErr)) {
+          const message = quotaErrorMessage(usageErr);
+          return jsonResponse(402, {
+            message,
+            error: message,
+            code: "quota_exceeded",
+          });
+        }
+
+        return jsonResponse(500, {
+          message: `Usage quota check failed: ${usageErr?.message ?? String(usageErr)}`,
+          error: `Usage quota check failed: ${usageErr?.message ?? String(usageErr)}`,
+          code: "quota_check_failed",
         });
       }
 
