@@ -109,10 +109,13 @@ async function ensurePersonalOrgAndSubscription(params: { supabase: any; userId:
     );
 
   // Create a default Starter subscription if none exists.
-  // This insert is allowed by RLS only for plan_id='starter'. If it already exists, ignore duplicates.
+  // This write is allowed by RLS only for plan_id='starter'. If it already exists, ignore duplicates.
   const { error } = await supabase
     .from("subscriptions")
-    .insert({ org_id: userId, plan_id: "starter", status: "active" });
+    .upsert(
+      { org_id: userId, plan_id: "starter", status: "active" },
+      { onConflict: "org_id", ignoreDuplicates: true }
+    );
 
   if (error && !(String(error.code) === "23505" || String(error.message).toLowerCase().includes("duplicate"))) {
     throw error;
