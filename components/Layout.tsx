@@ -18,6 +18,9 @@ interface LayoutProps {
   onForms: () => void;
   onResponses: () => void;
   onLogout: () => void;
+  onPrivacy?: () => void;
+  onTerms?: () => void;
+  onImpressum?: () => void;
   currentProjectName?: string;
   user?: LayoutUser;
 }
@@ -33,6 +36,9 @@ export const Layout: React.FC<LayoutProps> = ({
     onForms,
     onResponses,
     onLogout,
+    onPrivacy,
+    onTerms,
+    onImpressum,
     currentProjectName,
     user,
 }) => {
@@ -249,6 +255,35 @@ export const Layout: React.FC<LayoutProps> = ({
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-7xl mx-auto p-6 md:p-12 lg:p-16">
             {children}
+
+            <footer className="mt-16 pt-10 border-t border-zinc-100">
+              <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+                <div className="text-xs font-medium text-zinc-400">© {new Date().getFullYear()} Scutch</div>
+                <nav className="flex flex-wrap gap-6 text-sm font-semibold text-zinc-500">
+                  <button
+                    type="button"
+                    onClick={onPrivacy}
+                    className="hover:text-zinc-950 transition-colors"
+                  >
+                    Privacy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onTerms}
+                    className="hover:text-zinc-950 transition-colors"
+                  >
+                    Terms &amp; Conditions
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onImpressum}
+                    className="hover:text-zinc-950 transition-colors"
+                  >
+                    Impressum
+                  </button>
+                </nav>
+              </div>
+            </footer>
           </div>
         </div>
       </main>

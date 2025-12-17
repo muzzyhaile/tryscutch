@@ -18,6 +18,9 @@ export const VIEW_STATES = {
   FORMS: 'forms',
   FEEDBACK: 'feedback',
   RESPONSES: 'responses',
+  PRIVACY: 'privacy',
+  TERMS: 'terms',
+  IMPRESSUM: 'impressum',
 } as const;
 
 export type ViewState = typeof VIEW_STATES[keyof typeof VIEW_STATES];
@@ -39,6 +42,9 @@ export type ProjectStatus = typeof PROJECT_STATUS[keyof typeof PROJECT_STATUS];
 export const ROUTES = {
   FORM: '/f/:formId',
   HOME: '/',
+  PRIVACY: '/privacy',
+  TERMS: '/terms',
+  IMPRESSUM: '/impressum',
 } as const;
 
 /**

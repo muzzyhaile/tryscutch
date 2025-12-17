@@ -222,9 +222,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
              <span className="font-bold text-lg tracking-tight text-zinc-950">Scutch</span>
               </div>
               <div className="flex gap-8 text-sm font-bold text-zinc-400">
-                  <a href="#" className="hover:text-black transition-colors">Privacy</a>
-                  <a href="#" className="hover:text-black transition-colors">Terms</a>
-                  <a href="#" className="hover:text-black transition-colors">Twitter</a>
+              <a href="/privacy" className="hover:text-black transition-colors">Privacy</a>
+              <a href="/terms" className="hover:text-black transition-colors">Terms &amp; Conditions</a>
+              <a href="/impressum" className="hover:text-black transition-colors">Impressum</a>
               </div>
               <div className="text-xs font-medium text-zinc-400">
               © 2025 Triscutch. All rights reserved.

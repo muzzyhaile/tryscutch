@@ -11,6 +11,10 @@ import { FeedbackLibrary } from './components/FeedbackLibrary';
 import { PublicForm } from './components/PublicForm';
 import { ResponseViewer } from './components/ResponseViewer';
 import { AuthView } from './components/AuthView';
+import { LegalLayout } from './components/LegalLayout';
+import { PrivacyPage } from './components/PrivacyPage';
+import { TermsPage } from './components/TermsPage';
+import { ImpressumPage } from './components/ImpressumPage';
 import { Project, AnalysisResult } from './types';
 import { FormResponse } from './types-forms';
 import { analyzeFeedbackBatch } from './services/geminiService';
@@ -26,7 +30,14 @@ import { supabase } from './lib/supabaseClient';
 import { QuotaExceededError } from './services/geminiService';
 import { useNotification } from './lib/notification';
 import { logger } from './lib/logger';
-import { VIEW_STATES, ERROR_MESSAGES, CONFIRM_MESSAGES, ViewState } from './lib/constants';
+import { VIEW_STATES, ERROR_MESSAGES, CONFIRM_MESSAGES, ROUTES, ViewState } from './lib/constants';
+
+function viewForPathname(pathname: string): ViewState {
+  if (pathname === ROUTES.PRIVACY) return VIEW_STATES.PRIVACY;
+  if (pathname === ROUTES.TERMS) return VIEW_STATES.TERMS;
+  if (pathname === ROUTES.IMPRESSUM) return VIEW_STATES.IMPRESSUM;
+  return VIEW_STATES.LANDING;
+}
 
 const App: React.FC = () => {
   const initialPath = window.location.pathname;
@@ -45,12 +56,21 @@ const App: React.FC = () => {
   
   // Local component state
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [view, setView] = useState<ViewState>(VIEW_STATES.LANDING);
+  const [view, setView] = useState<ViewState>(() => viewForPathname(window.location.pathname));
   const [isLoading, setIsLoading] = useState(false);
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [isFormView, setIsFormView] = useState(Boolean(initialFormIdParam));
   const [formIdParam, setFormIdParam] = useState<string | null>(initialFormIdParam);
   const [serverPlanId, setServerPlanId] = useState<PlanId>('starter');
+
+  const navigateTo = (path: string, nextView: ViewState) => {
+    window.history.pushState({}, '', path);
+    setIsFormView(false);
+    setFormIdParam(null);
+    setIsPrintMode(false);
+    setCurrentProject(null);
+    setView(nextView);
+  };
 
   // If a user arrives already authenticated, skip the marketing landing page.
   useEffect(() => {
@@ -62,15 +82,48 @@ const App: React.FC = () => {
 
   // Check URL params on mount
   useEffect(() => {
-    // Check URL params for form view
-    const path = window.location.pathname;
-    const formMatch = path.match(/\/f\/([^/]+)/);
-    if (formMatch) {
-      setIsFormView(true);
-      setFormIdParam(formMatch[1]);
-      return;
-    }
+    const applyRoute = () => {
+      const path = window.location.pathname;
 
+      // Public form route.
+      const formMatch = path.match(/\/f\/([^/]+)/);
+      if (formMatch) {
+        setIsFormView(true);
+        setFormIdParam(formMatch[1]);
+        return;
+      }
+
+      // Legal routes.
+      if (path === ROUTES.PRIVACY) {
+        setIsFormView(false);
+        setFormIdParam(null);
+        setView(VIEW_STATES.PRIVACY);
+        return;
+      }
+      if (path === ROUTES.TERMS) {
+        setIsFormView(false);
+        setFormIdParam(null);
+        setView(VIEW_STATES.TERMS);
+        return;
+      }
+      if (path === ROUTES.IMPRESSUM) {
+        setIsFormView(false);
+        setFormIdParam(null);
+        setView(VIEW_STATES.IMPRESSUM);
+        return;
+      }
+
+      // Default.
+      setIsFormView(false);
+      setFormIdParam(null);
+    };
+
+    applyRoute();
+
+    const onPopState = () => applyRoute();
+    window.addEventListener('popstate', onPopState);
+
+    // Check URL params for form view
     // Check URL params for print mode
     const params = new URLSearchParams(window.location.search);
     const print = params.get('print');
@@ -83,6 +136,7 @@ const App: React.FC = () => {
         setCurrentProject(p);
       }
     }
+    return () => window.removeEventListener('popstate', onPopState);
   }, [projects]);
 
   // Update form response counts
@@ -157,6 +211,31 @@ const App: React.FC = () => {
   // SPECIAL RENDER FOR FORM VIEW (public)
   if (isFormView && formIdParam) {
     return <PublicForm formId={formIdParam} forms={forms} onSubmit={handleFormSubmit} />;
+  }
+
+  // Public legal pages (no auth required)
+  if (view === VIEW_STATES.PRIVACY) {
+    return (
+      <LegalLayout title="Privacy">
+        <PrivacyPage />
+      </LegalLayout>
+    );
+  }
+
+  if (view === VIEW_STATES.TERMS) {
+    return (
+      <LegalLayout title="Terms & Conditions">
+        <TermsPage />
+      </LegalLayout>
+    );
+  }
+
+  if (view === VIEW_STATES.IMPRESSUM) {
+    return (
+      <LegalLayout title="Impressum">
+        <ImpressumPage />
+      </LegalLayout>
+    );
   }
 
   // Render Landing Page completely separate from the App Layout (show before auth)
@@ -312,6 +391,18 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
+    if (view === VIEW_STATES.PRIVACY) {
+      return <PrivacyPage />;
+    }
+
+    if (view === VIEW_STATES.TERMS) {
+      return <TermsPage />;
+    }
+
+    if (view === VIEW_STATES.IMPRESSUM) {
+      return <ImpressumPage />;
+    }
+
     if (view === VIEW_STATES.NEW) {
       return (
         <IngestionWizard
@@ -457,8 +548,7 @@ const App: React.FC = () => {
       }}
       onNewProject={() => setView(VIEW_STATES.NEW)}
       onGoHome={() => {
-          setView(VIEW_STATES.LIST);
-          setCurrentProject(null);
+          navigateTo(ROUTES.HOME, VIEW_STATES.LIST);
       }}
       onSettings={() => {
           setView(VIEW_STATES.SETTINGS);
@@ -484,6 +574,9 @@ const App: React.FC = () => {
           setView(VIEW_STATES.RESPONSES);
           setCurrentProject(null);
       }}
+      onPrivacy={() => navigateTo(ROUTES.PRIVACY, VIEW_STATES.PRIVACY)}
+      onTerms={() => navigateTo(ROUTES.TERMS, VIEW_STATES.TERMS)}
+      onImpressum={() => navigateTo(ROUTES.IMPRESSUM, VIEW_STATES.IMPRESSUM)}
       currentProjectName={
           view === VIEW_STATES.SETTINGS ? 'Settings' : 
           view === VIEW_STATES.BILLING ? 'Billing' : 
@@ -491,12 +584,16 @@ const App: React.FC = () => {
           view === VIEW_STATES.FORMS ? 'Forms' :
         view === VIEW_STATES.FEEDBACK ? 'Feedback Library' :
           view === VIEW_STATES.RESPONSES ? 'Responses' :
+          view === VIEW_STATES.PRIVACY ? 'Privacy' :
+          view === VIEW_STATES.TERMS ? 'Terms & Conditions' :
+          view === VIEW_STATES.IMPRESSUM ? 'Impressum' :
           currentProject?.name
       }
       onLogout={() => {
         // Navigate back to the marketing page immediately.
         setCurrentProject(null);
         setView(VIEW_STATES.LANDING);
+        window.history.pushState({}, '', ROUTES.HOME);
         void signOut().catch((err) => {
           logger.error('Sign out failed', err, 'App');
           notify({ type: 'error', message: err instanceof Error ? err.message : ERROR_MESSAGES.SIGN_OUT_FAILED });
