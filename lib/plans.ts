@@ -1,6 +1,6 @@
 import { storage } from './storage';
 
-export type PlanId = 'starter' | 'pro' | 'enterprise';
+export type PlanId = 'free' | 'starter' | 'pro' | 'enterprise';
 
 export interface PlanLimits {
   maxProjects: number;
@@ -40,6 +40,21 @@ const SUBSCRIPTION_KEY_PREFIX = 'scutch_subscription:';
 const USAGE_KEY_PREFIX = 'scutch_usage:';
 
 export const PLAN_CATALOG: Record<PlanId, Plan> = {
+  free: {
+    id: 'free',
+    name: 'Free',
+    priceLabel: '$0 / month',
+    description: 'Try Scutch with a small monthly analysis allowance.',
+    limits: {
+      maxProjects: 3,
+      maxItemsPerAnalysis: 10,
+      maxCharsPerAnalysis: 400_000,
+      monthlyItems: 10,
+      importMaxFileBytes: 5 * 1024 * 1024,
+      importMaxTableRows: 2_500,
+      seatsIncluded: 1,
+    },
+  },
   starter: {
     id: 'starter',
     name: 'Starter',
@@ -107,9 +122,9 @@ export function loadSubscription(userId?: string | null): SubscriptionState {
   if (existing?.planId && existing.planId in PLAN_CATALOG) return existing;
 
   const fallback: SubscriptionState = {
-    planId: 'starter',
+    planId: 'free',
     updatedAt: new Date().toISOString(),
-    seats: PLAN_CATALOG.starter.limits.seatsIncluded,
+    seats: PLAN_CATALOG.free.limits.seatsIncluded,
   };
   return fallback;
 }

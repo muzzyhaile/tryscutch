@@ -62,7 +62,7 @@ const App: React.FC = () => {
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [isFormView, setIsFormView] = useState(Boolean(initialFormIdParam));
   const [formIdParam, setFormIdParam] = useState<string | null>(initialFormIdParam);
-  const [serverPlanId, setServerPlanId] = useState<PlanId>('starter');
+  const [serverPlanId, setServerPlanId] = useState<PlanId>('free');
 
   const navigateTo = (path: string, nextView: ViewState) => {
     window.history.pushState({}, '', path);
@@ -172,17 +172,34 @@ const App: React.FC = () => {
             { onConflict: 'org_id,user_id', ignoreDuplicates: true }
           );
 
+        // Ensure a baseline Free subscription exists for first-time users.
+        // This is safe to allow client-side because it cannot be used to self-upgrade.
+        await supabase
+          .from('subscriptions')
+          .upsert(
+            {
+              org_id: userId,
+              plan_id: 'free',
+              status: 'active',
+              stripe_customer_id: null,
+              stripe_subscription_id: null,
+              stripe_price_id: null,
+            },
+            { onConflict: 'org_id', ignoreDuplicates: true }
+          );
+
         const { data: sub, error } = await supabase
           .from('subscriptions')
           .select('plan_id')
           .eq('org_id', userId)
           .maybeSingle();
         if (error) throw error;
-        if (!cancelled && sub?.plan_id && (sub.plan_id === 'starter' || sub.plan_id === 'pro')) {
-          setServerPlanId(sub.plan_id);
+        const planId = sub?.plan_id as PlanId | undefined;
+        if (!cancelled && planId && planId in PLAN_CATALOG) {
+          setServerPlanId(planId);
         }
       } catch {
-        // If billing tables aren't deployed yet, keep starter.
+        // If billing tables aren't deployed yet, keep free.
       }
     };
 

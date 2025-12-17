@@ -14,10 +14,11 @@ type BillingViewProps = {
 };
 
 type ServerSubscription = {
-    plan_id: 'starter' | 'pro';
+    plan_id: 'free' | 'starter' | 'pro' | 'enterprise';
     status: string;
     cancel_at_period_end: boolean | null;
     current_period_end: string | null;
+    stripe_customer_id: string | null;
 };
 
 type ServerUsage = {
@@ -74,9 +75,24 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                         { onConflict: 'org_id,user_id', ignoreDuplicates: true }
                     );
 
+                // Ensure a baseline Free subscription exists for first-time users.
+                await supabase
+                    .from('subscriptions')
+                    .upsert(
+                        {
+                            org_id: userId,
+                            plan_id: 'free',
+                            status: 'active',
+                            stripe_customer_id: null,
+                            stripe_subscription_id: null,
+                            stripe_price_id: null,
+                        },
+                        { onConflict: 'org_id', ignoreDuplicates: true }
+                    );
+
                 const { data: sub, error: subErr } = await supabase
                     .from('subscriptions')
-                    .select('plan_id,status,cancel_at_period_end,current_period_end')
+                    .select('plan_id,status,cancel_at_period_end,current_period_end,stripe_customer_id')
                     .eq('org_id', userId)
                     .maybeSingle();
                 if (subErr) throw subErr;
@@ -106,7 +122,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
         };
     }, [userId, monthStart]);
 
-    const planIdFromServer = (serverSub?.plan_id ?? 'starter') as PlanId;
+    const planIdFromServer = (serverSub?.plan_id ?? 'free') as PlanId;
     const currentPlan = useMemo(() => PLAN_CATALOG[planIdFromServer], [planIdFromServer]);
 
     const statusLabel = (serverSub?.status ?? 'not subscribed').toString().replace(/_/g, ' ');
@@ -134,9 +150,12 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
   const seatsIncluded = currentPlan.limits.seatsIncluded;
     const seats = seatsIncluded;
 
+    const canManageBilling = Boolean(serverSub?.stripe_customer_id) && planIdFromServer !== 'free';
+
     const startCheckout = async (targetPlanId: PlanId) => {
         if (!userId) return;
         if (targetPlanId === planIdFromServer) return;
+        if (targetPlanId === 'free') return;
         if (targetPlanId === 'enterprise') {
             window.location.href = 'mailto:sales@triscutch.com?subject=Scutch%20Enterprise%20Plan';
             return;
@@ -212,7 +231,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                                                     <button
                                                         type="button"
                                                         onClick={openPortal}
-                                                        disabled={isStartingPortal || !serverSub}
+                                                        disabled={isStartingPortal || !canManageBilling}
                                                         className="px-5 py-2 bg-white text-zinc-950 font-bold rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-60"
                                                     >
                                                         {isStartingPortal ? 'Opening…' : 'Manage Billing'}

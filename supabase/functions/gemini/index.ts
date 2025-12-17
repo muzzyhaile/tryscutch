@@ -132,6 +132,25 @@ async function ensurePersonalOrgAndMembership(params: { supabaseAdmin: any; user
       `bootstrap organization_members failed: ${memberErr.message ?? String(memberErr)}`
     );
   }
+
+  // Baseline subscription: every user starts on Free.
+  // Stripe/webhook upgrades will overwrite this row.
+  const { error: subErr } = await supabaseAdmin
+    .from("subscriptions")
+    .upsert(
+      {
+        org_id: userId,
+        plan_id: "free",
+        status: "active",
+        stripe_customer_id: null,
+        stripe_subscription_id: null,
+        stripe_price_id: null,
+      },
+      { onConflict: "org_id", ignoreDuplicates: true }
+    );
+  if (subErr) {
+    throw new Error(`bootstrap subscriptions failed: ${subErr.message ?? String(subErr)}`);
+  }
 }
 
 function estimateCharsForAnalysis(params: { feedbackItems: string[]; context?: string }) {
