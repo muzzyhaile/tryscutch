@@ -12,6 +12,7 @@ import { PublicForm } from './components/PublicForm';
 import { ResponseViewer } from './components/ResponseViewer';
 import { AuthView } from './components/AuthView';
 import { Project, AnalysisResult } from './types';
+import { FormResponse } from './types-forms';
 import { analyzeFeedbackBatch } from './services/geminiService';
 import { PLAN_CATALOG, PlanId } from './lib/plans';
 import { useProjects } from './hooks/useProjects';
