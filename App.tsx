@@ -11,6 +11,7 @@ import { FeedbackLibrary } from './components/FeedbackLibrary';
 import { PublicForm } from './components/PublicForm';
 import { ResponseViewer } from './components/ResponseViewer';
 import { AuthView } from './components/AuthView';
+import { ExplainerView } from './components/ExplainerView';
 import { LegalLayout } from './components/LegalLayout';
 import { PrivacyPage } from './components/PrivacyPage';
 import { TermsPage } from './components/TermsPage';
@@ -472,6 +473,17 @@ const App: React.FC = () => {
       );
     }
 
+    if (view === VIEW_STATES.HELP) {
+      return (
+        <ExplainerView
+          onStartNewAnalysis={() => setView(VIEW_STATES.NEW)}
+          onOpenForms={() => setView(VIEW_STATES.FORMS)}
+          onOpenResponses={() => setView(VIEW_STATES.RESPONSES)}
+          onOpenBilling={() => setView(VIEW_STATES.BILLING)}
+        />
+      );
+    }
+
     if (view === VIEW_STATES.BILLING) {
       return <BillingView userId={user?.id} projectsCount={projects.length} />;
     }
@@ -587,6 +599,8 @@ const App: React.FC = () => {
           email: user?.email ?? undefined,
           avatarUrl: (user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture) as string | undefined,
         }}
+        currentPlanName={PLAN_CATALOG[serverPlanId]?.name}
+        workspaceLabel={(user?.email?.split('@')?.[1] ?? 'Personal') as string}
         onNewProject={() => setView(VIEW_STATES.NEW)}
         onGoHome={() => {
             navigateTo(ROUTES.HOME, VIEW_STATES.LIST);
@@ -598,6 +612,10 @@ const App: React.FC = () => {
         onBilling={() => {
             setView(VIEW_STATES.BILLING);
             setCurrentProject(null);
+        }}
+        onHelp={() => {
+          setView(VIEW_STATES.HELP);
+          setCurrentProject(null);
         }}
         onContextLibrary={() => {
             setView(VIEW_STATES.CONTEXT);
@@ -621,6 +639,7 @@ const App: React.FC = () => {
         currentProjectName={
             view === VIEW_STATES.SETTINGS ? 'Settings' : 
             view === VIEW_STATES.BILLING ? 'Billing' : 
+            view === VIEW_STATES.HELP ? 'Help' :
             view === VIEW_STATES.CONTEXT ? 'Context Library' :
             view === VIEW_STATES.FORMS ? 'Forms' :
           view === VIEW_STATES.FEEDBACK ? 'Feedback Library' :

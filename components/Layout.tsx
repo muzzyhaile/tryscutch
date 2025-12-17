@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Layers, Settings, Plus, LayoutGrid, CreditCard, FileText, Inbox, Library, LogOut, User as UserIcon } from 'lucide-react';
+import { Layers, Settings, Plus, LayoutGrid, CreditCard, FileText, Inbox, Library, LogOut, HelpCircle } from 'lucide-react';
 
 type LayoutUser = {
   name?: string;
@@ -13,6 +13,7 @@ interface LayoutProps {
   onGoHome: () => void;
   onSettings: () => void;
   onBilling: () => void;
+  onHelp: () => void;
   onContextLibrary: () => void;
   onFeedbackLibrary: () => void;
   onForms: () => void;
@@ -22,6 +23,8 @@ interface LayoutProps {
   onTerms?: () => void;
   onImpressum?: () => void;
   currentProjectName?: string;
+  currentPlanName?: string;
+  workspaceLabel?: string;
   user?: LayoutUser;
 }
 
@@ -31,6 +34,7 @@ export const Layout: React.FC<LayoutProps> = ({
     onGoHome, 
     onSettings,
     onBilling,
+    onHelp,
     onContextLibrary,
   onFeedbackLibrary,
     onForms,
@@ -40,6 +44,8 @@ export const Layout: React.FC<LayoutProps> = ({
     onTerms,
     onImpressum,
     currentProjectName,
+    currentPlanName,
+    workspaceLabel,
     user,
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -148,8 +154,8 @@ export const Layout: React.FC<LayoutProps> = ({
             >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 shadow-md group-hover:scale-110 transition-transform"></div>
                 <div>
-                    <div className="text-sm font-bold text-zinc-900">Pro Plan</div>
-                    <div className="text-xs text-zinc-400 group-hover:text-indigo-600 transition-colors">workspace.team</div>
+              <div className="text-sm font-bold text-zinc-900">{currentPlanName ? `${currentPlanName} Plan` : 'Plan'}</div>
+              <div className="text-xs text-zinc-400 group-hover:text-indigo-600 transition-colors">{workspaceLabel || 'Personal'}</div>
                 </div>
             </div>
            <button 
@@ -231,6 +237,19 @@ export const Layout: React.FC<LayoutProps> = ({
                 >
                   <CreditCard size={18} className="text-zinc-400" />
                   Billing
+                </button>
+
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    onHelp();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                >
+                  <HelpCircle size={18} className="text-zinc-400" />
+                  Help & Onboarding
                 </button>
 
                 <div className="h-px bg-zinc-100" />

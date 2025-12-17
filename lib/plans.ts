@@ -51,7 +51,7 @@ export const PLAN_CATALOG: Record<PlanId, Plan> = {
       maxCharsPerAnalysis: 400_000,
       monthlyItems: 10,
       importMaxFileBytes: 5 * 1024 * 1024,
-      importMaxTableRows: 2_500,
+      importMaxTableRows: 250,
       seatsIncluded: 1,
     },
   },

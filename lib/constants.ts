@@ -14,6 +14,7 @@ export const VIEW_STATES = {
   ANALYSIS: 'analysis',
   SETTINGS: 'settings',
   BILLING: 'billing',
+  HELP: 'help',
   CONTEXT: 'context',
   FORMS: 'forms',
   FEEDBACK: 'feedback',
