@@ -8,6 +8,21 @@ interface PublicFormProps {
   onSubmit: (response: FormResponse) => void;
 }
 
+const PublicLegalFooter: React.FC = () => {
+  return (
+    <footer className="border-t border-zinc-200 bg-zinc-50 shrink-0">
+      <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+        <div className="text-[11px] font-medium text-zinc-400">© {new Date().getFullYear()} Scutch</div>
+        <div className="flex gap-4 text-xs font-semibold text-zinc-400">
+          <a href="/privacy" className="hover:text-zinc-950 transition-colors">Privacy</a>
+          <a href="/terms" className="hover:text-zinc-950 transition-colors">Terms</a>
+          <a href="/impressum" className="hover:text-zinc-950 transition-colors">Site Notice</a>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
 export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit }) => {
   const [form, setForm] = useState<FeedbackForm | null>(null);
   const [answers, setAnswers] = useState<{ [questionId: string]: string | string[] }>({});
@@ -269,41 +284,48 @@ export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit 
 
   if (!form) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-zinc-950 mb-2">Form Not Found</h2>
-          <p className="text-zinc-500">This form is no longer available or has been deactivated.</p>
+      <div className="min-h-screen bg-zinc-50 flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-zinc-950 mb-2">Form Not Found</h2>
+            <p className="text-zinc-500">This form is no longer available or has been deactivated.</p>
+          </div>
         </div>
+        <PublicLegalFooter />
       </div>
     );
   }
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-zinc-200 text-center">
-          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={32} className="text-emerald-600" />
-          </div>
-          <h2 className="text-2xl font-bold text-zinc-950 mb-2">Thank You!</h2>
-          <p className="text-zinc-600 mb-4">Your feedback has been submitted successfully.</p>
-          {form.settings.redirectUrl && (
-            <p className="text-sm text-zinc-400">Redirecting...</p>
-          )}
-          {form.settings.showBranding && (
-            <div className="mt-8 pt-6 border-t border-zinc-100">
-              <p className="text-xs text-zinc-400">Powered by <span className="font-bold text-zinc-950">Scutch</span></p>
+      <div className="min-h-screen bg-zinc-50 flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-zinc-200 text-center">
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle size={32} className="text-emerald-600" />
             </div>
-          )}
+            <h2 className="text-2xl font-bold text-zinc-950 mb-2">Thank You!</h2>
+            <p className="text-zinc-600 mb-4">Your feedback has been submitted successfully.</p>
+            {form.settings.redirectUrl && (
+              <p className="text-sm text-zinc-400">Redirecting...</p>
+            )}
+            {form.settings.showBranding && (
+              <div className="mt-8 pt-6 border-t border-zinc-100">
+                <p className="text-xs text-zinc-400">Powered by <span className="font-bold text-zinc-950">Scutch</span></p>
+              </div>
+            )}
+          </div>
         </div>
+        <PublicLegalFooter />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white p-8 md:p-12 rounded-2xl border border-zinc-200 shadow-sm">
+    <div className="min-h-screen bg-zinc-50 flex flex-col">
+      <div className="flex-1 py-12 px-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="bg-white p-8 md:p-12 rounded-2xl border border-zinc-200 shadow-sm">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-zinc-950 mb-2">{form.name}</h1>
             {form.description && (
@@ -371,8 +393,11 @@ export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit 
               <p className="text-xs text-zinc-400">Powered by <span className="font-bold text-zinc-950">Scutch</span></p>
             </div>
           )}
+          </div>
         </div>
       </div>
+
+      <PublicLegalFooter />
     </div>
   );
 };

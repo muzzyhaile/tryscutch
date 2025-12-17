@@ -252,40 +252,40 @@ export const Layout: React.FC<LayoutProps> = ({
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="max-w-7xl mx-auto p-6 md:p-12 lg:p-16">
             {children}
-
-            <footer className="mt-16 pt-10 border-t border-zinc-100">
-              <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-                <div className="text-xs font-medium text-zinc-400">© {new Date().getFullYear()} Scutch</div>
-                <nav className="flex flex-wrap gap-6 text-sm font-semibold text-zinc-500">
-                  <button
-                    type="button"
-                    onClick={onPrivacy}
-                    className="hover:text-zinc-950 transition-colors"
-                  >
-                    Privacy
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onTerms}
-                    className="hover:text-zinc-950 transition-colors"
-                  >
-                    Terms &amp; Conditions
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onImpressum}
-                    className="hover:text-zinc-950 transition-colors"
-                  >
-                    Impressum
-                  </button>
-                </nav>
-              </div>
-            </footer>
           </div>
         </div>
+
+        <footer className="border-t border-zinc-100 bg-white shrink-0">
+          <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-16 py-4 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+            <div className="text-[11px] font-medium text-zinc-400">© {new Date().getFullYear()} Scutch</div>
+            <nav className="flex flex-wrap gap-4 text-xs font-semibold text-zinc-400">
+              <button
+                type="button"
+                onClick={onPrivacy}
+                className="hover:text-zinc-950 transition-colors"
+              >
+                Privacy
+              </button>
+              <button
+                type="button"
+                onClick={onTerms}
+                className="hover:text-zinc-950 transition-colors"
+              >
+                Terms
+              </button>
+              <button
+                type="button"
+                onClick={onImpressum}
+                className="hover:text-zinc-950 transition-colors"
+              >
+                Site Notice
+              </button>
+            </nav>
+          </div>
+        </footer>
       </main>
     </div>
   );

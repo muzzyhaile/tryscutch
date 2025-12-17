@@ -7,7 +7,7 @@ interface LandingPageProps {
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
   return (
-    <div className="bg-white min-h-screen font-sans text-zinc-950 selection:bg-black selection:text-white">
+    <div className="bg-white min-h-screen font-sans text-zinc-950 selection:bg-black selection:text-white flex flex-col">
       {/* Nav */}
       <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-zinc-100 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -215,21 +215,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 border-t border-zinc-200 bg-zinc-50">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-              <div className="flex items-center gap-3">
-             <div className="w-8 h-8 bg-zinc-950 rounded-lg flex items-center justify-center text-white text-sm font-bold">S</div>
-             <span className="font-bold text-lg tracking-tight text-zinc-950">Scutch</span>
-              </div>
-              <div className="flex gap-8 text-sm font-bold text-zinc-400">
-              <a href="/privacy" className="hover:text-black transition-colors">Privacy</a>
-              <a href="/terms" className="hover:text-black transition-colors">Terms &amp; Conditions</a>
-              <a href="/impressum" className="hover:text-black transition-colors">Impressum</a>
-              </div>
-              <div className="text-xs font-medium text-zinc-400">
-              © 2025 Triscutch. All rights reserved.
-              </div>
+      <footer className="mt-auto py-6 px-6 border-t border-zinc-200 bg-zinc-50">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+          <div className="text-[11px] font-medium text-zinc-400">© {new Date().getFullYear()} Scutch</div>
+          <div className="flex gap-4 text-xs font-semibold text-zinc-400">
+            <a href="/privacy" className="hover:text-black transition-colors">Privacy</a>
+            <a href="/terms" className="hover:text-black transition-colors">Terms</a>
+            <a href="/impressum" className="hover:text-black transition-colors">Site Notice</a>
           </div>
+        </div>
       </footer>
     </div>
   );

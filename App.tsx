@@ -15,6 +15,7 @@ import { LegalLayout } from './components/LegalLayout';
 import { PrivacyPage } from './components/PrivacyPage';
 import { TermsPage } from './components/TermsPage';
 import { ImpressumPage } from './components/ImpressumPage';
+import { CookieBanner } from './components/CookieBanner';
 import { Project, AnalysisResult } from './types';
 import { FormResponse } from './types-forms';
 import { analyzeFeedbackBatch } from './services/geminiService';
@@ -210,51 +211,78 @@ const App: React.FC = () => {
 
   // SPECIAL RENDER FOR FORM VIEW (public)
   if (isFormView && formIdParam) {
-    return <PublicForm formId={formIdParam} forms={forms} onSubmit={handleFormSubmit} />;
+    return (
+      <>
+        <CookieBanner />
+        <PublicForm formId={formIdParam} forms={forms} onSubmit={handleFormSubmit} />
+      </>
+    );
   }
 
   // Public legal pages (no auth required)
   if (view === VIEW_STATES.PRIVACY) {
     return (
-      <LegalLayout title="Privacy">
-        <PrivacyPage />
-      </LegalLayout>
+      <>
+        <CookieBanner />
+        <LegalLayout title="Privacy">
+          <PrivacyPage />
+        </LegalLayout>
+      </>
     );
   }
 
   if (view === VIEW_STATES.TERMS) {
     return (
-      <LegalLayout title="Terms & Conditions">
-        <TermsPage />
-      </LegalLayout>
+      <>
+        <CookieBanner />
+        <LegalLayout title="Terms">
+          <TermsPage />
+        </LegalLayout>
+      </>
     );
   }
 
   if (view === VIEW_STATES.IMPRESSUM) {
     return (
-      <LegalLayout title="Impressum">
-        <ImpressumPage />
-      </LegalLayout>
+      <>
+        <CookieBanner />
+        <LegalLayout title="Site Notice">
+          <ImpressumPage />
+        </LegalLayout>
+      </>
     );
   }
 
   // Render Landing Page completely separate from the App Layout (show before auth)
   if (view === VIEW_STATES.LANDING) {
-    return <LandingPage onStart={() => setView(VIEW_STATES.LIST)} />;
+    return (
+      <>
+        <CookieBanner />
+        <LandingPage onStart={() => setView(VIEW_STATES.LIST)} />
+      </>
+    );
   }
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-white text-zinc-950 flex items-center justify-center">
-        <div className="flex items-center gap-3 text-zinc-600 font-semibold">
-          <Loader2 className="animate-spin" /> Loading…
+      <>
+        <CookieBanner />
+        <div className="min-h-screen bg-white text-zinc-950 flex items-center justify-center">
+          <div className="flex items-center gap-3 text-zinc-600 font-semibold">
+            <Loader2 className="animate-spin" /> Loading…
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (!user) {
-    return <AuthView />;
+    return (
+      <>
+        <CookieBanner />
+        <AuthView />
+      </>
+    );
   }
 
   const handleAnalyze = async (name: string, items: string[], context?: string) => {
@@ -540,68 +568,71 @@ const App: React.FC = () => {
   };
 
   return (
-    <Layout 
-      user={{
-        name: (user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? user?.email ?? 'Account') as string,
-        email: user?.email ?? undefined,
-        avatarUrl: (user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture) as string | undefined,
-      }}
-      onNewProject={() => setView(VIEW_STATES.NEW)}
-      onGoHome={() => {
-          navigateTo(ROUTES.HOME, VIEW_STATES.LIST);
-      }}
-      onSettings={() => {
-          setView(VIEW_STATES.SETTINGS);
+    <>
+      <CookieBanner />
+      <Layout 
+        user={{
+          name: (user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? user?.email ?? 'Account') as string,
+          email: user?.email ?? undefined,
+          avatarUrl: (user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture) as string | undefined,
+        }}
+        onNewProject={() => setView(VIEW_STATES.NEW)}
+        onGoHome={() => {
+            navigateTo(ROUTES.HOME, VIEW_STATES.LIST);
+        }}
+        onSettings={() => {
+            setView(VIEW_STATES.SETTINGS);
+            setCurrentProject(null);
+        }}
+        onBilling={() => {
+            setView(VIEW_STATES.BILLING);
+            setCurrentProject(null);
+        }}
+        onContextLibrary={() => {
+            setView(VIEW_STATES.CONTEXT);
+            setCurrentProject(null);
+        }}
+        onFeedbackLibrary={() => {
+          setView(VIEW_STATES.FEEDBACK);
           setCurrentProject(null);
-      }}
-      onBilling={() => {
-          setView(VIEW_STATES.BILLING);
+        }}
+        onForms={() => {
+            setView(VIEW_STATES.FORMS);
+            setCurrentProject(null);
+        }}
+        onResponses={() => {
+            setView(VIEW_STATES.RESPONSES);
+            setCurrentProject(null);
+        }}
+        onPrivacy={() => navigateTo(ROUTES.PRIVACY, VIEW_STATES.PRIVACY)}
+        onTerms={() => navigateTo(ROUTES.TERMS, VIEW_STATES.TERMS)}
+        onImpressum={() => navigateTo(ROUTES.IMPRESSUM, VIEW_STATES.IMPRESSUM)}
+        currentProjectName={
+            view === VIEW_STATES.SETTINGS ? 'Settings' : 
+            view === VIEW_STATES.BILLING ? 'Billing' : 
+            view === VIEW_STATES.CONTEXT ? 'Context Library' :
+            view === VIEW_STATES.FORMS ? 'Forms' :
+          view === VIEW_STATES.FEEDBACK ? 'Feedback Library' :
+            view === VIEW_STATES.RESPONSES ? 'Responses' :
+            view === VIEW_STATES.PRIVACY ? 'Privacy' :
+            view === VIEW_STATES.TERMS ? 'Terms' :
+            view === VIEW_STATES.IMPRESSUM ? 'Site Notice' :
+            currentProject?.name
+        }
+        onLogout={() => {
+          // Navigate back to the marketing page immediately.
           setCurrentProject(null);
-      }}
-      onContextLibrary={() => {
-          setView(VIEW_STATES.CONTEXT);
-          setCurrentProject(null);
-      }}
-      onFeedbackLibrary={() => {
-        setView(VIEW_STATES.FEEDBACK);
-        setCurrentProject(null);
-      }}
-      onForms={() => {
-          setView(VIEW_STATES.FORMS);
-          setCurrentProject(null);
-      }}
-      onResponses={() => {
-          setView(VIEW_STATES.RESPONSES);
-          setCurrentProject(null);
-      }}
-      onPrivacy={() => navigateTo(ROUTES.PRIVACY, VIEW_STATES.PRIVACY)}
-      onTerms={() => navigateTo(ROUTES.TERMS, VIEW_STATES.TERMS)}
-      onImpressum={() => navigateTo(ROUTES.IMPRESSUM, VIEW_STATES.IMPRESSUM)}
-      currentProjectName={
-          view === VIEW_STATES.SETTINGS ? 'Settings' : 
-          view === VIEW_STATES.BILLING ? 'Billing' : 
-          view === VIEW_STATES.CONTEXT ? 'Context Library' :
-          view === VIEW_STATES.FORMS ? 'Forms' :
-        view === VIEW_STATES.FEEDBACK ? 'Feedback Library' :
-          view === VIEW_STATES.RESPONSES ? 'Responses' :
-          view === VIEW_STATES.PRIVACY ? 'Privacy' :
-          view === VIEW_STATES.TERMS ? 'Terms & Conditions' :
-          view === VIEW_STATES.IMPRESSUM ? 'Impressum' :
-          currentProject?.name
-      }
-      onLogout={() => {
-        // Navigate back to the marketing page immediately.
-        setCurrentProject(null);
-        setView(VIEW_STATES.LANDING);
-        window.history.pushState({}, '', ROUTES.HOME);
-        void signOut().catch((err) => {
-          logger.error('Sign out failed', err, 'App');
-          notify({ type: 'error', message: err instanceof Error ? err.message : ERROR_MESSAGES.SIGN_OUT_FAILED });
-        });
-      }}
-    >
-      {renderContent()}
-    </Layout>
+          setView(VIEW_STATES.LANDING);
+          window.history.pushState({}, '', ROUTES.HOME);
+          void signOut().catch((err) => {
+            logger.error('Sign out failed', err, 'App');
+            notify({ type: 'error', message: err instanceof Error ? err.message : ERROR_MESSAGES.SIGN_OUT_FAILED });
+          });
+        }}
+      >
+        {renderContent()}
+      </Layout>
+    </>
   );
 };
 
