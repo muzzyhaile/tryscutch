@@ -161,7 +161,7 @@ const App: React.FC = () => {
 
     const run = async () => {
       try {
-        // Bootstrap personal org + membership + starter subscription (RLS allows this).
+        // Bootstrap personal org + membership. Subscription is created by Stripe webhook after payment.
         await supabase
           .from('organizations')
           .upsert({ id: userId, name: 'Personal' }, { onConflict: 'id', ignoreDuplicates: true });
@@ -170,12 +170,6 @@ const App: React.FC = () => {
           .upsert(
             { org_id: userId, user_id: userId, role: 'owner' },
             { onConflict: 'org_id,user_id', ignoreDuplicates: true }
-          );
-        await supabase
-          .from('subscriptions')
-          .upsert(
-            { org_id: userId, plan_id: 'starter', status: 'active' },
-            { onConflict: 'org_id', ignoreDuplicates: true }
           );
 
         const { data: sub, error } = await supabase

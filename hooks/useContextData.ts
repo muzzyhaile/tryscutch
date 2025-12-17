@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ContextData, ICP, MarketFeedback, ProductInfo, ProductPrinciple } from '../types';
-import { storage, STORAGE_KEYS } from '../lib/storage';
+import { scopedStorageKey, storage, STORAGE_KEYS } from '../lib/storage';
 import { supabase } from '../lib/supabaseClient';
 
 const DEFAULT_CONTEXT: ContextData = {
@@ -19,6 +19,8 @@ export function useContextData(userId?: string) {
   const [isLoadedFromRemote, setIsLoadedFromRemote] = useState(false);
   const skipNextSyncRef = useRef(false);
 
+  const contextKey = scopedStorageKey(STORAGE_KEYS.CONTEXT, userId);
+
   const isUuid = (value: string): boolean => {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
   };
@@ -26,7 +28,7 @@ export function useContextData(userId?: string) {
   // Load from Supabase when authenticated; fall back to localStorage if no userId.
   useEffect(() => {
     if (!userId) {
-      const stored = storage.get<ContextData>(STORAGE_KEYS.CONTEXT);
+      const stored = storage.get<ContextData>(contextKey);
       setContextData(stored ?? DEFAULT_CONTEXT);
       setIsLoadedFromRemote(false);
       return;
@@ -46,7 +48,7 @@ export function useContextData(userId?: string) {
       const anyError = icpsRes.error || productsRes.error || marketRes.error || principlesRes.error;
       if (anyError) {
         console.error(anyError);
-        const stored = storage.get<ContextData>(STORAGE_KEYS.CONTEXT);
+        const stored = storage.get<ContextData>(contextKey);
         setContextData(stored ?? DEFAULT_CONTEXT);
         setIsLoadedFromRemote(false);
         return;
@@ -89,7 +91,7 @@ export function useContextData(userId?: string) {
         })) as ProductPrinciple[],
       };
 
-      const local = storage.get<ContextData>(STORAGE_KEYS.CONTEXT) ?? DEFAULT_CONTEXT;
+      const local = storage.get<ContextData>(contextKey) ?? DEFAULT_CONTEXT;
       const localHasAny =
         (local.icps?.length ?? 0) +
           (local.productInfos?.length ?? 0) +
@@ -109,7 +111,7 @@ export function useContextData(userId?: string) {
           productPrinciples: (local.productPrinciples ?? []).map(pr => ({ ...pr, id: isUuid(pr.id) ? pr.id : crypto.randomUUID() })),
         };
 
-        storage.set(STORAGE_KEYS.CONTEXT, migrated);
+        storage.set(contextKey, migrated);
 
         await Promise.all([
           migrated.icps.length
@@ -186,12 +188,12 @@ export function useContextData(userId?: string) {
     return () => {
       isMounted = false;
     };
-  }, [userId]);
+  }, [userId, contextKey]);
 
   // Persist to storage whenever data changes
   useEffect(() => {
-    storage.set(STORAGE_KEYS.CONTEXT, contextData);
-  }, [contextData]);
+    storage.set(contextKey, contextData);
+  }, [contextData, contextKey]);
 
   // Sync to Supabase whenever context changes.
   useEffect(() => {

@@ -63,7 +63,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
             setError(null);
 
             try {
-                // Bootstrap personal org + membership + starter subscription (RLS allows this).
+                // Bootstrap personal org + membership. Subscription is created by Stripe webhook after payment.
                 await supabase
                     .from('organizations')
                     .upsert({ id: userId, name: 'Personal' }, { onConflict: 'id', ignoreDuplicates: true });
@@ -72,13 +72,6 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                     .upsert(
                         { org_id: userId, user_id: userId, role: 'owner' },
                         { onConflict: 'org_id,user_id', ignoreDuplicates: true }
-                    );
-
-                await supabase
-                    .from('subscriptions')
-                    .upsert(
-                        { org_id: userId, plan_id: 'starter', status: 'active' },
-                        { onConflict: 'org_id', ignoreDuplicates: true }
                     );
 
                 const { data: sub, error: subErr } = await supabase
@@ -115,6 +108,8 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
 
     const planIdFromServer = (serverSub?.plan_id ?? 'starter') as PlanId;
     const currentPlan = useMemo(() => PLAN_CATALOG[planIdFromServer], [planIdFromServer]);
+
+    const statusLabel = (serverSub?.status ?? 'not subscribed').toString().replace(/_/g, ' ');
 
     const usage = useMemo(
         () => ({
@@ -212,12 +207,12 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                         </div>
                                                 <div className="flex items-center gap-3">
                                                     <div className="px-4 py-2 bg-white/10 rounded-full text-xs font-bold uppercase tracking-widest">
-                                                        {(serverSub?.status ?? 'active').toString().replace(/_/g, ' ')}
+                                                        {statusLabel}
                                                     </div>
                                                     <button
                                                         type="button"
                                                         onClick={openPortal}
-                                                        disabled={isStartingPortal}
+                                                        disabled={isStartingPortal || !serverSub}
                                                         className="px-5 py-2 bg-white text-zinc-950 font-bold rounded-xl hover:bg-zinc-200 transition-colors disabled:opacity-60"
                                                     >
                                                         {isStartingPortal ? 'Opening…' : 'Manage Billing'}

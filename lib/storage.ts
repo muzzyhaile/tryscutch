@@ -89,5 +89,9 @@ export const STORAGE_KEYS = {
   LANGUAGE: 'clarity_language',
 } as const;
 
+export function scopedStorageKey(baseKey: string, userId?: string) {
+  return userId ? `${baseKey}:${userId}` : `${baseKey}:anon`;
+}
+
 // Default export: singleton instance
 export const storage: IStorage = new LocalStorageRepository();

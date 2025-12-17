@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { SupportedLanguage } from '../types-languages';
-import { storage, STORAGE_KEYS } from '../lib/storage';
+import { scopedStorageKey, storage, STORAGE_KEYS } from '../lib/storage';
 import { supabase } from '../lib/supabaseClient';
 
 export function useLanguage(userId?: string) {
@@ -14,14 +14,17 @@ export function useLanguage(userId?: string) {
   const [isLoadedFromRemote, setIsLoadedFromRemote] = useState(false);
   const skipNextSyncRef = useRef(false);
 
-  useEffect(() => {
-    const stored = storage.get<SupportedLanguage>(STORAGE_KEYS.LANGUAGE);
-    if (stored) setSelectedLanguage(stored);
-  }, []);
+  const languageKey = scopedStorageKey(STORAGE_KEYS.LANGUAGE, userId);
 
   useEffect(() => {
-    storage.set(STORAGE_KEYS.LANGUAGE, selectedLanguage);
-  }, [selectedLanguage]);
+    const stored = storage.get<SupportedLanguage>(languageKey);
+    if (stored) setSelectedLanguage(stored);
+    setIsLoadedFromRemote(false);
+  }, [languageKey]);
+
+  useEffect(() => {
+    storage.set(languageKey, selectedLanguage);
+  }, [selectedLanguage, languageKey]);
 
   useEffect(() => {
     if (!userId) {
@@ -54,7 +57,7 @@ export function useLanguage(userId?: string) {
       }
 
       // If no profile row yet, backfill from local/default.
-      const stored = storage.get<SupportedLanguage>(STORAGE_KEYS.LANGUAGE) ?? 'en';
+      const stored = storage.get<SupportedLanguage>(languageKey) ?? 'en';
       await supabase.from('profiles').upsert(
         {
           user_id: userId,
@@ -71,7 +74,7 @@ export function useLanguage(userId?: string) {
     return () => {
       isMounted = false;
     };
-  }, [userId]);
+  }, [userId, languageKey]);
 
   useEffect(() => {
     if (!userId) return;

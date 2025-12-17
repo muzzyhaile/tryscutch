@@ -47,25 +47,27 @@ export function useSyncedState<T, TRow = any>(
   const prevIdsRef = useRef<Set<string>>(new Set());
   const skipNextSyncRef = useRef(false);
 
-  // Load from localStorage on mount
+  const scopedStorageKey = userId ? `${config.storageKey}:${userId}` : `${config.storageKey}:anon`;
+
+  // Load from localStorage whenever user changes (prevents cross-user leakage)
   useEffect(() => {
-    const stored = storage.get<T[]>(config.storageKey);
-    if (stored) {
-      setData(stored);
-      prevIdsRef.current = new Set(stored.map(config.getEntityId));
-    }
-  }, []);
+    const stored = storage.get<T[]>(scopedStorageKey) ?? [];
+    setData(stored);
+    prevIdsRef.current = new Set(stored.map(config.getEntityId));
+    setIsLoadedFromRemote(false);
+  }, [scopedStorageKey]);
 
   // Persist to localStorage whenever data changes
   useEffect(() => {
-    storage.set(config.storageKey, data);
-  }, [data, config.storageKey]);
+    storage.set(scopedStorageKey, data);
+  }, [data, scopedStorageKey]);
 
   // Load from Supabase when authenticated
   useEffect(() => {
     if (!userId) {
       setIsLoadedFromRemote(false);
-      const stored = storage.get<T[]>(config.storageKey) ?? [];
+      const stored = storage.get<T[]>(scopedStorageKey) ?? [];
+      setData(stored);
       prevIdsRef.current = new Set(stored.map(config.getEntityId));
       return;
     }
@@ -91,7 +93,7 @@ export function useSyncedState<T, TRow = any>(
 
         if (error) {
           logger.error(`Failed to load ${config.tableName} from Supabase`, error, 'useSyncedState');
-          const stored = storage.get<T[]>(config.storageKey) ?? [];
+          const stored = storage.get<T[]>(scopedStorageKey) ?? [];
           setData(stored);
           setIsLoadedFromRemote(false);
           prevIdsRef.current = new Set(stored.map(config.getEntityId));
@@ -101,7 +103,7 @@ export function useSyncedState<T, TRow = any>(
         const remote = (rows as TRow[]).map(config.rowToEntity);
 
         // One-time backfill: if remote is empty but local has data, upload it
-        const local = storage.get<T[]>(config.storageKey) ?? [];
+        const local = storage.get<T[]>(scopedStorageKey) ?? [];
         if (remote.length === 0 && local.length > 0) {
           logger.info(`Backfilling ${local.length} items to ${config.tableName}`, undefined, 'useSyncedState');
           
@@ -116,7 +118,7 @@ export function useSyncedState<T, TRow = any>(
             return item;
           });
 
-          storage.set(config.storageKey, migrated);
+          storage.set(scopedStorageKey, migrated);
 
           const rows = migrated.map(item => config.entityToRow(userId, item));
           const { error: upsertError } = await supabase
@@ -159,7 +161,7 @@ export function useSyncedState<T, TRow = any>(
     return () => {
       isMounted = false;
     };
-  }, [userId, config.tableName, config.storageKey]);
+  }, [userId, config.tableName, scopedStorageKey]);
 
   // Sync changes to Supabase (upserts + deletes)
   useEffect(() => {

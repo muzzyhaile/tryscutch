@@ -6,7 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { FeedbackForm, FormResponse } from '../types-forms';
-import { storage, STORAGE_KEYS } from '../lib/storage';
+import { scopedStorageKey, storage, STORAGE_KEYS } from '../lib/storage';
 import { supabase } from '../lib/supabaseClient';
 
 type FormRow = {
@@ -102,28 +102,34 @@ export function useForms(userId?: string) {
   const prevResponseIdsRef = useRef<Set<string>>(new Set());
   const skipNextSyncRef = useRef(false);
 
-  // Always load local cache immediately.
+  const formsKey = scopedStorageKey(STORAGE_KEYS.FORMS, userId);
+  const responsesKey = scopedStorageKey(STORAGE_KEYS.RESPONSES, userId);
+
+  // Always load local cache immediately (and whenever user changes).
   useEffect(() => {
-    const storedForms = storage.get<FeedbackForm[]>(STORAGE_KEYS.FORMS);
-    const storedResponses = storage.get<FormResponse[]>(STORAGE_KEYS.RESPONSES);
+    const storedForms = storage.get<FeedbackForm[]>(formsKey);
+    const storedResponses = storage.get<FormResponse[]>(responsesKey);
     if (storedForms) setForms(storedForms);
     if (storedResponses) setResponses(storedResponses);
-  }, []);
+    setIsLoadedFromRemote(false);
+    prevFormIdsRef.current = new Set((storedForms ?? []).map(f => f.id));
+    prevResponseIdsRef.current = new Set((storedResponses ?? []).map(r => r.id));
+  }, [formsKey, responsesKey]);
 
   // Persist to localStorage.
   useEffect(() => {
-    storage.set(STORAGE_KEYS.FORMS, forms);
-  }, [forms]);
+    storage.set(formsKey, forms);
+  }, [forms, formsKey]);
   useEffect(() => {
-    storage.set(STORAGE_KEYS.RESPONSES, responses);
-  }, [responses]);
+    storage.set(responsesKey, responses);
+  }, [responses, responsesKey]);
 
   // Load from Supabase when authenticated.
   useEffect(() => {
     if (!userId) {
       setIsLoadedFromRemote(false);
-      prevFormIdsRef.current = new Set((storage.get<FeedbackForm[]>(STORAGE_KEYS.FORMS) ?? []).map(f => f.id));
-      prevResponseIdsRef.current = new Set((storage.get<FormResponse[]>(STORAGE_KEYS.RESPONSES) ?? []).map(r => r.id));
+      prevFormIdsRef.current = new Set((storage.get<FeedbackForm[]>(formsKey) ?? []).map(f => f.id));
+      prevResponseIdsRef.current = new Set((storage.get<FormResponse[]>(responsesKey) ?? []).map(r => r.id));
       return;
     }
 
@@ -172,8 +178,8 @@ export function useForms(userId?: string) {
       );
 
       // One-time backfill: if remote is empty but local has data, upload it.
-      const localForms = storage.get<FeedbackForm[]>(STORAGE_KEYS.FORMS) ?? [];
-      const localResponses = storage.get<FormResponse[]>(STORAGE_KEYS.RESPONSES) ?? [];
+      const localForms = storage.get<FeedbackForm[]>(formsKey) ?? [];
+      const localResponses = storage.get<FormResponse[]>(responsesKey) ?? [];
       const remoteHasAny = remoteForms.length > 0 || remoteResponses.length > 0;
       const localHasAny = localForms.length > 0 || localResponses.length > 0;
 
@@ -193,8 +199,8 @@ export function useForms(userId?: string) {
           })
           .filter((r) => isUuid(r.formId));
 
-        storage.set(STORAGE_KEYS.FORMS, migratedForms);
-        storage.set(STORAGE_KEYS.RESPONSES, migratedResponses);
+        storage.set(formsKey, migratedForms);
+        storage.set(responsesKey, migratedResponses);
 
         const formRows = migratedForms.map(f => formToUpsertRow(userId, f));
         const { error: upsertFormsError } = await supabase.from('forms').upsert(formRows, { onConflict: 'id' });
@@ -237,7 +243,7 @@ export function useForms(userId?: string) {
     return () => {
       isMounted = false;
     };
-  }, [userId]);
+  }, [userId, formsKey, responsesKey]);
 
   // Sync forms to Supabase.
   useEffect(() => {

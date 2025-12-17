@@ -21,7 +21,12 @@ function jsonResponse(status: number, body: Record<string, unknown>) {
 
 function requireEnv(name: string) {
   const v = Deno.env.get(name);
-  if (!v) throw new Error(`Missing ${name} in Edge Function env.`);
+  if (!v) {
+    throw new Error(
+      `Missing ${name} in Edge Function env. Set it in Supabase Dashboard → Edge Functions → Secrets, or via \
+supabase secrets set ${name}=...`
+    );
+  }
   return v;
 }
 

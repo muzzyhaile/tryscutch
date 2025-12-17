@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { FeedbackEntry, FeedbackSourceType } from '../types';
-import { storage, STORAGE_KEYS } from '../lib/storage';
+import { scopedStorageKey, storage, STORAGE_KEYS } from '../lib/storage';
 import { supabase } from '../lib/supabaseClient';
 
 type FeedbackEntryRow = {
@@ -67,10 +67,12 @@ export function useFeedbackLibrary(userId?: string) {
   const prevIdsRef = useRef<Set<string>>(new Set());
   const skipNextSyncRef = useRef(false);
 
+  const entriesKey = scopedStorageKey(STORAGE_KEYS.FEEDBACK_LIBRARY, userId);
+
   // Load from Supabase when authenticated; fall back to localStorage if no userId.
   useEffect(() => {
     if (!userId) {
-      const stored = storage.get<FeedbackEntry[]>(STORAGE_KEYS.FEEDBACK_LIBRARY);
+      const stored = storage.get<FeedbackEntry[]>(entriesKey);
       setEntries(stored ?? []);
       setIsLoadedFromRemote(false);
       prevIdsRef.current = new Set((stored ?? []).map(e => e.id));
@@ -90,7 +92,7 @@ export function useFeedbackLibrary(userId?: string) {
       if (error) {
         console.error(error);
         // If remote fails, show local data rather than a blank screen.
-        const stored = storage.get<FeedbackEntry[]>(STORAGE_KEYS.FEEDBACK_LIBRARY);
+        const stored = storage.get<FeedbackEntry[]>(entriesKey);
         setEntries(stored ?? []);
         setIsLoadedFromRemote(false);
         prevIdsRef.current = new Set((stored ?? []).map(e => e.id));
@@ -111,8 +113,8 @@ export function useFeedbackLibrary(userId?: string) {
 
   // Persist to localStorage (so the UI remains fast and resilient).
   useEffect(() => {
-    storage.set(STORAGE_KEYS.FEEDBACK_LIBRARY, entries);
-  }, [entries]);
+    storage.set(entriesKey, entries);
+  }, [entries, entriesKey]);
 
   // Sync changes to Supabase (upserts + deletes). This keeps the existing UI contract (setEntries) intact.
   useEffect(() => {

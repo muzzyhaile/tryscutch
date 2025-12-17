@@ -25,7 +25,12 @@ function jsonResponse(status: number, body: JsonRecord) {
 
 function requireEnv(name: string) {
   const v = Deno.env.get(name);
-  if (!v) throw new Error(`Missing ${name} in Edge Function env.`);
+  if (!v) {
+    throw new Error(
+      `Missing ${name} in Edge Function env. Set it in Supabase Dashboard → Edge Functions → Secrets, or via \
+supabase secrets set ${name}=...`
+    );
+  }
   return v;
 }
 
@@ -87,7 +92,7 @@ function resolvePriceId(planId: PlanId): string {
   return planId === "starter" ? starter : pro;
 }
 
-async function ensurePersonalOrgAndSubscription(params: { supabase: any; userId: string }) {
+async function ensurePersonalOrgAndMembership(params: { supabase: any; userId: string }) {
   const { supabase, userId } = params;
   await supabase
     .from("organizations")
@@ -98,17 +103,6 @@ async function ensurePersonalOrgAndSubscription(params: { supabase: any; userId:
       { org_id: userId, user_id: userId, role: "owner" },
       { onConflict: "org_id,user_id", ignoreDuplicates: true }
     );
-
-  const { error } = await supabase
-    .from("subscriptions")
-    .upsert(
-      { org_id: userId, plan_id: "starter", status: "active" },
-      { onConflict: "org_id", ignoreDuplicates: true }
-    );
-
-  if (error && !(String(error.code) === "23505" || String(error.message).toLowerCase().includes("duplicate"))) {
-    throw error;
-  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -145,10 +139,10 @@ Deno.serve(async (req: Request) => {
 
     const orgId = user.id;
 
-    // Ensure org/subscription exists under RLS.
-    await ensurePersonalOrgAndSubscription({ supabase, userId: orgId });
+    // Ensure org/membership exists under RLS.
+    await ensurePersonalOrgAndMembership({ supabase, userId: orgId });
 
-    // Read subscription via service role (we may need to update stripe_customer_id).
+    // Read subscription via service role (we may need to create/update stripe_customer_id).
     const { data: subRow, error: subErr } = await service
       .from("subscriptions")
       .select("org_id, stripe_customer_id")
@@ -171,10 +165,20 @@ Deno.serve(async (req: Request) => {
 
       customerId = customer.id;
 
+      // Do not mark the subscription active here. We create/update a placeholder row and let the webhook
+      // reconcile the real subscription after payment succeeds.
       await service
         .from("subscriptions")
-        .update({ stripe_customer_id: customerId, updated_at: new Date().toISOString() })
-        .eq("org_id", orgId);
+        .upsert(
+          {
+            org_id: orgId,
+            plan_id: planId,
+            status: "incomplete",
+            stripe_customer_id: customerId,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "org_id" }
+        );
     }
 
     const priceId = resolvePriceId(planId);

@@ -110,7 +110,7 @@ function createServiceSupabaseClient() {
   });
 }
 
-async function ensurePersonalOrgAndSubscription(params: { supabaseAdmin: any; userId: string }) {
+async function ensurePersonalOrgAndMembership(params: { supabaseAdmin: any; userId: string }) {
   const { supabaseAdmin, userId } = params;
 
   // Personal org: org_id == user_id.
@@ -131,19 +131,6 @@ async function ensurePersonalOrgAndSubscription(params: { supabaseAdmin: any; us
     throw new Error(
       `bootstrap organization_members failed: ${memberErr.message ?? String(memberErr)}`
     );
-  }
-
-  // Create a default Starter subscription if none exists.
-  // (Use admin client to avoid RLS/bootstrapping failures; still only writes starter.)
-  const { error: subErr } = await supabaseAdmin
-    .from("subscriptions")
-    .upsert(
-      { org_id: userId, plan_id: "starter", status: "active" },
-      { onConflict: "org_id", ignoreDuplicates: true }
-    );
-
-  if (subErr) {
-    throw new Error(`bootstrap subscriptions failed: ${subErr.message ?? String(subErr)}`);
   }
 }
 
@@ -261,7 +248,7 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createAuthedSupabaseClient({ req });
     const supabaseAdmin = createServiceSupabaseClient();
-    await ensurePersonalOrgAndSubscription({ supabaseAdmin, userId: user.id });
+    await ensurePersonalOrgAndMembership({ supabaseAdmin, userId: user.id });
 
     const apiKey = Deno.env.get("GEMINI_API_KEY") ?? "";
     if (!apiKey) {
