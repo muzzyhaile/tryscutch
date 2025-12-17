@@ -24,6 +24,9 @@ import { useAuth } from './hooks/useAuth';
 import { Loader2, Plus, ArrowRight, LayoutGrid } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { QuotaExceededError } from './services/geminiService';
+import { useNotification } from './lib/notification';
+import { logger } from './lib/logger';
+import { VIEW_STATES, ERROR_MESSAGES, CONFIRM_MESSAGES, ViewState } from './lib/constants';
 
 const App: React.FC = () => {
   const initialPath = window.location.pathname;
@@ -31,6 +34,7 @@ const App: React.FC = () => {
   const initialFormIdParam = initialFormMatch ? initialFormMatch[1] : null;
 
   const { user, isLoading: authLoading, signOut } = useAuth();
+  const { notify, confirm } = useNotification();
 
   // Custom hooks for state management with persistence
   const { projects, addProject, updateProject, deleteProject: removeProject } = useProjects(user?.id);
@@ -41,7 +45,7 @@ const App: React.FC = () => {
   
   // Local component state
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [view, setView] = useState<'landing' | 'list' | 'new' | 'analysis' | 'settings' | 'billing' | 'context' | 'forms' | 'feedback' | 'responses'>('landing');
+  const [view, setView] = useState<ViewState>(VIEW_STATES.LANDING);
   const [isLoading, setIsLoading] = useState(false);
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [isFormView, setIsFormView] = useState(Boolean(initialFormIdParam));
@@ -51,8 +55,8 @@ const App: React.FC = () => {
   // If a user arrives already authenticated, skip the marketing landing page.
   useEffect(() => {
     if (!user) return;
-    if (view === 'landing') {
-      setView('list');
+    if (view === VIEW_STATES.LANDING) {
+      setView(VIEW_STATES.LIST);
     }
   }, [user, view]);
 
@@ -98,7 +102,7 @@ const App: React.FC = () => {
     const form = forms.find(f => f.id === response.formId);
     if (form?.settings.autoImportToAnalysis) {
       // Store for later import - could be enhanced to auto-create analysis
-      console.log('Auto-import enabled for response:', response.id);
+      logger.info('Auto-import enabled for response', { responseId: response.id }, 'App');
     }
   }
 
@@ -108,8 +112,8 @@ const App: React.FC = () => {
   }
 
   // Render Landing Page completely separate from the App Layout (show before auth)
-  if (view === 'landing') {
-    return <LandingPage onStart={() => setView('list')} />;
+  if (view === VIEW_STATES.LANDING) {
+    return <LandingPage onStart={() => setView(VIEW_STATES.LIST)} />;
   }
 
   if (authLoading) {
@@ -169,23 +173,33 @@ const App: React.FC = () => {
   const handleAnalyze = async (name: string, items: string[], context?: string) => {
     const plan = PLAN_CATALOG[serverPlanId];
     if (Number.isFinite(plan.limits.maxProjects) && projects.length >= plan.limits.maxProjects) {
-      alert(`You have reached the ${plan.name} project limit (${plan.limits.maxProjects.toLocaleString()}). Upgrade your plan to create more projects.`);
-      setView('billing');
+      notify({
+        type: 'warning',
+        title: 'Project Limit Reached',
+        message: ERROR_MESSAGES.PROJECT_LIMIT_REACHED(plan.name, plan.limits.maxProjects),
+      });
+      setView(VIEW_STATES.BILLING);
       return;
     }
 
     if (items.length > plan.limits.maxItemsPerAnalysis) {
-      alert(
-        `This plan allows up to ${plan.limits.maxItemsPerAnalysis.toLocaleString()} feedback items per analysis. You tried ${items.length.toLocaleString()}. Split the file or upgrade your plan.`
-      );
-      setView('billing');
+      notify({
+        type: 'warning',
+        title: 'Items Limit Exceeded',
+        message: ERROR_MESSAGES.ITEMS_LIMIT_EXCEEDED(plan.limits.maxItemsPerAnalysis, items.length),
+      });
+      setView(VIEW_STATES.BILLING);
       return;
     }
 
     const totalChars = items.reduce((sum, it) => sum + (it?.length || 0), 0) + (context?.length || 0);
     if (totalChars > plan.limits.maxCharsPerAnalysis) {
-      alert('This analysis is too large for your plan. Reduce the amount of text or upgrade your plan.');
-      setView('billing');
+      notify({
+        type: 'warning',
+        title: 'Analysis Too Large',
+        message: ERROR_MESSAGES.ANALYSIS_TOO_LARGE,
+      });
+      setView(VIEW_STATES.BILLING);
       return;
     }
 
@@ -212,14 +226,14 @@ const App: React.FC = () => {
 
       addProject(completedProject);
       setCurrentProject(completedProject);
-      setView('analysis');
+      setView(VIEW_STATES.ANALYSIS);
     } catch (error) {
-      console.error(error);
+      logger.error('Analysis failed', error, 'App');
       if (error instanceof QuotaExceededError) {
-        alert(error.message);
-        setView('billing');
+        notify({ type: 'error', title: 'Quota Exceeded', message: error.message });
+        setView(VIEW_STATES.BILLING);
       } else {
-        alert("Analysis failed. Please try again later or check your API key.");
+        notify({ type: 'error', title: 'Analysis Failed', message: ERROR_MESSAGES.ANALYSIS_FAILED });
       }
     } finally {
       setIsLoading(false);
@@ -231,14 +245,20 @@ const App: React.FC = () => {
     setCurrentProject(updatedProject);
   };
 
-  const handleDeleteProject = (id: string, e: React.MouseEvent) => {
+  const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if(confirm("Are you sure you want to delete this project?")) {
-        removeProject(id);
-        if(currentProject?.id === id) {
-            setView('list');
-            setCurrentProject(null);
-        }
+    const confirmed = await confirm({
+      message: CONFIRM_MESSAGES.DELETE_PROJECT,
+      type: 'danger',
+      confirmText: 'Delete',
+    });
+    if (confirmed) {
+      removeProject(id);
+      if (currentProject?.id === id) {
+        setView(VIEW_STATES.LIST);
+        setCurrentProject(null);
+      }
+      notify({ type: 'success', message: 'Project deleted successfully' });
     }
   }
 
@@ -284,7 +304,7 @@ const App: React.FC = () => {
   }
 
   const renderContent = () => {
-    if (view === 'new') {
+    if (view === VIEW_STATES.NEW) {
       return (
         <IngestionWizard
           onAnalyze={handleAnalyze}
@@ -299,34 +319,34 @@ const App: React.FC = () => {
       );
     }
 
-    if (view === 'analysis' && currentProject) {
+    if (view === VIEW_STATES.ANALYSIS && currentProject) {
       return <AnalysisView project={currentProject} onUpdateProject={handleUpdateProject} selectedLanguage={selectedLanguage} onLanguageChange={setSelectedLanguage} />;
     }
 
-    if (view === 'settings') {
+    if (view === VIEW_STATES.SETTINGS) {
       return (
         <SettingsView
           onBilling={() => {
-            setView('billing');
+            setView(VIEW_STATES.BILLING);
             setCurrentProject(null);
           }}
         />
       );
     }
 
-    if (view === 'billing') {
+    if (view === VIEW_STATES.BILLING) {
       return <BillingView userId={user?.id} projectsCount={projects.length} />;
     }
 
-    if (view === 'context') {
+    if (view === VIEW_STATES.CONTEXT) {
       return <ContextManager contextData={contextData} onUpdate={setContextData} />;
     }
 
-    if (view === 'forms') {
+    if (view === VIEW_STATES.FORMS) {
       return <FormBuilder forms={forms} onUpdate={setForms} />;
     }
 
-    if (view === 'feedback') {
+    if (view === VIEW_STATES.FEEDBACK) {
       return (
         <FeedbackLibrary
           entries={feedbackEntries}
@@ -339,7 +359,7 @@ const App: React.FC = () => {
       );
     }
 
-    if (view === 'responses') {
+    if (view === VIEW_STATES.RESPONSES) {
       return <ResponseViewer 
         responses={responses} 
         forms={forms} 
@@ -357,7 +377,7 @@ const App: React.FC = () => {
                  <p className="text-xl text-zinc-500 mt-2 font-light">Manage and review your feedback analysis.</p>
             </div>
             <button 
-                onClick={() => setView('new')}
+                onClick={() => setView(VIEW_STATES.NEW)}
                 className="bg-zinc-950 text-white px-6 py-3 rounded-xl text-base font-bold hover:bg-zinc-800 transition-colors flex items-center gap-2 shadow-lg hover:scale-105 transform duration-200"
             >
                 <Plus size={20} /> New Project
@@ -372,7 +392,7 @@ const App: React.FC = () => {
             <h3 className="text-2xl font-bold text-zinc-950 mb-2">No projects yet</h3>
             <p className="text-zinc-500 max-w-md mx-auto mb-8 text-lg">Start by creating a new project to analyze your customer feedback.</p>
             <button 
-                onClick={() => setView('new')}
+                onClick={() => setView(VIEW_STATES.NEW)}
                 className="text-zinc-950 font-bold hover:underline text-lg"
             >
                 Create your first project
@@ -385,7 +405,7 @@ const App: React.FC = () => {
                 key={p.id}
                 onClick={() => {
                     setCurrentProject(p);
-                    setView('analysis');
+                    setView(VIEW_STATES.ANALYSIS);
                 }}
                 className="group bg-white p-8 rounded-[2rem] border-2 border-zinc-100 hover:border-zinc-950 hover:shadow-2xl transition-all duration-300 cursor-pointer relative"
               >
@@ -427,51 +447,51 @@ const App: React.FC = () => {
         email: user?.email ?? undefined,
         avatarUrl: (user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture) as string | undefined,
       }}
-      onNewProject={() => setView('new')}
+      onNewProject={() => setView(VIEW_STATES.NEW)}
       onGoHome={() => {
-          setView('list');
+          setView(VIEW_STATES.LIST);
           setCurrentProject(null);
       }}
       onSettings={() => {
-          setView('settings');
+          setView(VIEW_STATES.SETTINGS);
           setCurrentProject(null);
       }}
       onBilling={() => {
-          setView('billing');
+          setView(VIEW_STATES.BILLING);
           setCurrentProject(null);
       }}
       onContextLibrary={() => {
-          setView('context');
+          setView(VIEW_STATES.CONTEXT);
           setCurrentProject(null);
       }}
       onFeedbackLibrary={() => {
-        setView('feedback');
+        setView(VIEW_STATES.FEEDBACK);
         setCurrentProject(null);
       }}
       onForms={() => {
-          setView('forms');
+          setView(VIEW_STATES.FORMS);
           setCurrentProject(null);
       }}
       onResponses={() => {
-          setView('responses');
+          setView(VIEW_STATES.RESPONSES);
           setCurrentProject(null);
       }}
       currentProjectName={
-          view === 'settings' ? 'Settings' : 
-          view === 'billing' ? 'Billing' : 
-          view === 'context' ? 'Context Library' :
-          view === 'forms' ? 'Forms' :
-        view === 'feedback' ? 'Feedback Library' :
-          view === 'responses' ? 'Responses' :
+          view === VIEW_STATES.SETTINGS ? 'Settings' : 
+          view === VIEW_STATES.BILLING ? 'Billing' : 
+          view === VIEW_STATES.CONTEXT ? 'Context Library' :
+          view === VIEW_STATES.FORMS ? 'Forms' :
+        view === VIEW_STATES.FEEDBACK ? 'Feedback Library' :
+          view === VIEW_STATES.RESPONSES ? 'Responses' :
           currentProject?.name
       }
       onLogout={() => {
         // Navigate back to the marketing page immediately.
         setCurrentProject(null);
-        setView('landing');
+        setView(VIEW_STATES.LANDING);
         void signOut().catch((err) => {
-          console.error(err);
-          alert(err instanceof Error ? err.message : 'Failed to sign out.');
+          logger.error('Sign out failed', err, 'App');
+          notify({ type: 'error', message: err instanceof Error ? err.message : ERROR_MESSAGES.SIGN_OUT_FAILED });
         });
       }}
     >
