@@ -95,6 +95,49 @@ const App: React.FC = () => {
     );
   }, [responses, setForms]);
 
+  // Keep a lightweight server-backed plan id for client-side UX checks.
+  // Real enforcement happens in the Edge Function + DB.
+  // NOTE: This hook must run unconditionally to satisfy the Rules of Hooks.
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        // Bootstrap personal org + membership + starter subscription (RLS allows this).
+        await supabase.from('organizations').upsert({ id: userId, name: 'Personal' }, { onConflict: 'id' });
+        await supabase
+          .from('organization_members')
+          .upsert({ org_id: userId, user_id: userId, role: 'owner' }, { onConflict: 'org_id,user_id' });
+        const insertRes = await supabase
+          .from('subscriptions')
+          .insert({ org_id: userId, plan_id: 'starter', status: 'active' });
+        if (insertRes.error && String(insertRes.error.code) !== '23505') {
+          throw insertRes.error;
+        }
+
+        const { data: sub, error } = await supabase
+          .from('subscriptions')
+          .select('plan_id')
+          .eq('org_id', userId)
+          .maybeSingle();
+        if (error) throw error;
+        if (!cancelled && sub?.plan_id && (sub.plan_id === 'starter' || sub.plan_id === 'pro')) {
+          setServerPlanId(sub.plan_id);
+        }
+      } catch {
+        // If billing tables aren't deployed yet, keep starter.
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
   const handleFormSubmit = (response: FormResponse) => {
     setResponses(prev => [response, ...prev]);
     
@@ -129,46 +172,6 @@ const App: React.FC = () => {
   if (!user) {
     return <AuthView />;
   }
-
-  // Keep a lightweight server-backed plan id for client-side UX checks.
-  // Real enforcement happens in the Edge Function + DB.
-  useEffect(() => {
-    if (!user?.id) return;
-    let cancelled = false;
-
-    const run = async () => {
-      try {
-        // Bootstrap personal org + membership + starter subscription (RLS allows this).
-        await supabase.from('organizations').upsert({ id: user.id, name: 'Personal' }, { onConflict: 'id' });
-        await supabase
-          .from('organization_members')
-          .upsert({ org_id: user.id, user_id: user.id, role: 'owner' }, { onConflict: 'org_id,user_id' });
-        const insertRes = await supabase
-          .from('subscriptions')
-          .insert({ org_id: user.id, plan_id: 'starter', status: 'active' });
-        if (insertRes.error && String(insertRes.error.code) !== '23505') {
-          throw insertRes.error;
-        }
-
-        const { data: sub, error } = await supabase
-          .from('subscriptions')
-          .select('plan_id')
-          .eq('org_id', user.id)
-          .maybeSingle();
-        if (error) throw error;
-        if (!cancelled && sub?.plan_id && (sub.plan_id === 'starter' || sub.plan_id === 'pro')) {
-          setServerPlanId(sub.plan_id);
-        }
-      } catch {
-        // If billing tables aren't deployed yet, keep starter.
-      }
-    };
-
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
 
   const handleAnalyze = async (name: string, items: string[], context?: string) => {
     const plan = PLAN_CATALOG[serverPlanId];
