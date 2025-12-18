@@ -15,13 +15,25 @@ declare global {
 const runtimeConfig: ClarityPublicConfig | undefined =
   typeof window !== 'undefined' ? window.__CLARITY_PUBLIC_CONFIG__ : undefined;
 
+function normalizePublicEnv(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  // If `index.html` placeholders weren't replaced, they'll look like: %VITE_SUPABASE_URL%
+  if (trimmed.startsWith('%VITE_') && trimmed.endsWith('%')) return undefined;
+  if (trimmed.includes('%VITE_SUPABASE_')) return undefined;
+  return trimmed;
+}
+
 const supabaseUrl =
-  (import.meta.env.VITE_SUPABASE_URL as string | undefined) || runtimeConfig?.supabaseUrl;
+  normalizePublicEnv(import.meta.env.VITE_SUPABASE_URL as string | undefined) ||
+  normalizePublicEnv(runtimeConfig?.supabaseUrl);
 const supabasePublishableKey =
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ||
-  runtimeConfig?.supabasePublishableKey;
+  normalizePublicEnv(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ||
+  normalizePublicEnv(runtimeConfig?.supabasePublishableKey);
 const supabaseAnonKey =
-  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) || runtimeConfig?.supabaseAnonKey;
+  normalizePublicEnv(import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ||
+  normalizePublicEnv(runtimeConfig?.supabaseAnonKey);
 const supabaseKey = supabasePublishableKey || supabaseAnonKey;
 
 if (!supabaseUrl || !supabaseKey) {

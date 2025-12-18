@@ -72,9 +72,17 @@
       // Public runtime config - injected at build time from environment variables
       // Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in your .env.local file
       // These placeholders are replaced during build by Vite
+      const __scutchNormalize = (v) => {
+        if (!v) return undefined;
+        const s = String(v).trim();
+        if (!s) return undefined;
+        if (s.startsWith('%VITE_') && s.endsWith('%')) return undefined;
+        if (s.includes('%VITE_SUPABASE_')) return undefined;
+        return s;
+      };
       window.__CLARITY_PUBLIC_CONFIG__ = {
-        supabaseUrl: '%VITE_SUPABASE_URL%' || undefined,
-        supabasePublishableKey: '%VITE_SUPABASE_PUBLISHABLE_KEY%' || undefined
+        supabaseUrl: __scutchNormalize('%VITE_SUPABASE_URL%'),
+        supabasePublishableKey: __scutchNormalize('%VITE_SUPABASE_PUBLISHABLE_KEY%')
       };
     </script>
 </head>
