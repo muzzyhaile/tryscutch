@@ -39,11 +39,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-black rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-lg">S</div>
-            <span className="font-bold text-xl tracking-tighter">Scutch</span>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xl tracking-tighter">Scutch</span>
+              <span className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase text-zinc-600">
+                Beta
+              </span>
+            </div>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm font-bold text-zinc-600">
             <a href="#features" className="hover:text-black transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-black transition-colors">How it Works</a>
+            <a href="#about" className="hover:text-black transition-colors">About</a>
             <button 
               onClick={onStart}
               className="bg-black text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-zinc-800 transition-all shadow-lg hover:shadow-xl hover:scale-105"
@@ -182,6 +188,38 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                       That’s ~80% less time <span className="font-semibold">in this example</span>.
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About */}
+      <section id="about" className="pb-24 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="rounded-[2rem] border border-zinc-200 bg-white p-8">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+              <div className="max-w-3xl">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-zinc-950">About Scutch</h2>
+                <p className="mt-3 text-zinc-600 leading-relaxed">
+                  Getting feedback is hard and once you have it, it comes from everywhere and quickly turns into noise.
+                  Scutch is about “scutching” the messy stuff away so you keep the core signal: the themes and priorities that actually matter.
+                </p>
+              </div>
+
+              <div className="w-full md:w-[340px]">
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+                  <div className="text-xs font-bold tracking-widest uppercase text-zinc-500">Status</div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase text-zinc-600">
+                      Beta
+                    </span>
+                    <span className="text-sm font-bold text-zinc-950">Still being built</span>
+                  </div>
+                  <p className="mt-2 text-sm text-zinc-600 leading-relaxed">
+                    You may see changes as we improve reliability, exports, and the analysis output. If something feels off, tell us — early adopters shape the product.
+                  </p>
                 </div>
               </div>
             </div>
