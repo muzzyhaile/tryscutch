@@ -18,6 +18,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
     const [inviteError, setInviteError] = useState<string | null>(null);
     const [isInviteLoading, setIsInviteLoading] = useState(false);
     const [inviteCopied, setInviteCopied] = useState(false);
+    const [bonusRemaining, setBonusRemaining] = useState<number | null>(null);
+    const [bonusGrantAmount, setBonusGrantAmount] = useState<number | null>(null);
+    const [isBonusLoading, setIsBonusLoading] = useState(false);
+    const [bonusError, setBonusError] = useState<string | null>(null);
 
     const nextSlug = useMemo(() => slugify(publicOrgName), [publicOrgName]);
 
@@ -42,6 +46,63 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
                 if (!cancelled) setOrgError(e?.message ?? 'Failed to load organization');
             } finally {
                 if (!cancelled) setIsOrgLoading(false);
+            }
+        };
+
+        void run();
+        return () => {
+            cancelled = true;
+        };
+    }, [userId]);
+
+    useEffect(() => {
+        if (!userId) return;
+        let cancelled = false;
+
+        const isMissingBonusSchemaError = (e: any) => {
+            const msg = String(e?.message ?? '');
+            const code = String(e?.code ?? '');
+            if (code === '42P01') return true;
+            if (/bonus_credits_balance|bonus_credits_grants/i.test(msg) && /does not exist|not found|schema cache/i.test(msg)) return true;
+            return false;
+        };
+
+        const run = async () => {
+            setIsBonusLoading(true);
+            setBonusError(null);
+            try {
+                const { data: balance, error: balErr } = await supabase
+                    .from('bonus_credits_balance')
+                    .select('remaining_items')
+                    .eq('org_id', userId)
+                    .maybeSingle();
+                if (balErr) throw balErr;
+
+                const { data: grant, error: grantErr } = await supabase
+                    .from('bonus_credits_grants')
+                    .select('amount_items')
+                    .eq('org_id', userId)
+                    .eq('grant_type', 'invite_welcome_1000')
+                    .maybeSingle();
+                if (grantErr) throw grantErr;
+
+                if (cancelled) return;
+                const remaining = Number((balance as any)?.remaining_items ?? 0);
+                setBonusRemaining(Number.isFinite(remaining) ? remaining : 0);
+
+                const grantAmount = grant ? Number((grant as any)?.amount_items ?? 0) : null;
+                setBonusGrantAmount(grantAmount && Number.isFinite(grantAmount) ? grantAmount : null);
+            } catch (e: any) {
+                if (cancelled) return;
+                if (isMissingBonusSchemaError(e)) {
+                    // If migrations are not deployed yet, don't show an error.
+                    setBonusRemaining(null);
+                    setBonusGrantAmount(null);
+                    return;
+                }
+                setBonusError(e?.message ?? 'Failed to load bonus credits.');
+            } finally {
+                if (!cancelled) setIsBonusLoading(false);
             }
         };
 
@@ -248,6 +309,46 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
                                     <p className="text-sm font-semibold text-rose-700">{inviteError}</p>
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </section>
+
+                {/* Bonus Credits */}
+                <section className="space-y-6">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-3 bg-zinc-100 rounded-xl">
+                            <CreditCard className="w-6 h-6 text-zinc-950" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-zinc-950 tracking-tight">Bonus Credits</h2>
+                    </div>
+
+                    <div className="p-6 rounded-3xl border border-zinc-100 bg-zinc-50/50 space-y-4">
+                        <p className="text-sm text-zinc-600">
+                            Bonus credits are a one-time buffer that can cover usage beyond your monthly plan limit.
+                        </p>
+
+                        {bonusError && (
+                            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                                <p className="text-sm font-semibold text-rose-700">{bonusError}</p>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="rounded-2xl border border-zinc-100 bg-white p-4">
+                                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Remaining</p>
+                                <p className="text-2xl font-extrabold text-zinc-950 mt-1">
+                                    {isBonusLoading ? 'Loading…' : bonusRemaining ?? '—'}
+                                </p>
+                                <p className="text-xs text-zinc-500 mt-1">credits (items)</p>
+                            </div>
+
+                            <div className="rounded-2xl border border-zinc-100 bg-white p-4">
+                                <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Welcome Grant</p>
+                                <p className="text-2xl font-extrabold text-zinc-950 mt-1">
+                                    {isBonusLoading ? 'Loading…' : bonusGrantAmount ?? '—'}
+                                </p>
+                                <p className="text-xs text-zinc-500 mt-1">(one-time)</p>
+                            </div>
                         </div>
                     </div>
                 </section>
