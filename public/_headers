@@ -1,0 +1,27 @@
+# Security Headers for Production Deployment (Netlify)
+# This file must live in the published output folder.
+# For Vite, anything in /public is copied into /dist, so this ends up at /dist/_headers.
+
+/*
+  # Content Security Policy - Prevents XSS and injection attacks
+  # Note: Fonts are self-hosted for better security (no external CDN dependencies)
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests
+
+  # Prevents clickjacking attacks
+  X-Frame-Options: DENY
+
+  # Prevents MIME type sniffing
+  X-Content-Type-Options: nosniff
+
+  # Controls referrer information
+  Referrer-Policy: strict-origin-when-cross-origin
+
+  # Restricts browser features
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+
+  # Force HTTPS (enable after SSL is configured)
+  # Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+
+  # Prevents older browsers from using insecure features
+  X-Content-Security-Policy: default-src 'self'
+  X-WebKit-CSP: default-src 'self'
