@@ -23,9 +23,15 @@ export const TermsPage: React.FC = () => {
       <section className="space-y-2">
         <h2 className="text-xl font-bold">2. The Service</h2>
         <p className="text-zinc-600 leading-relaxed">
-          The Service helps you upload, store, analyze, and export feedback and related content. The
-          Service may include AI-assisted features. Outputs are generated automatically and may be
-          inaccurate or incomplete.
+          The Service helps you upload or collect feedback, store it, analyze it, and export results.
+          Inputs may include files (e.g., CSV/XLSX/TXT/PDF) or text you paste. The Service may include
+          AI-assisted features. Outputs are generated automatically and may be inaccurate or
+          incomplete.
+        </p>
+        <p className="text-zinc-600 leading-relaxed">
+          Some features allow you to create shareable links (for example, public forms). You control
+          whether and how you share links. Anyone with access to a shareable link may be able to view
+          the form and submit information.
         </p>
       </section>
 
@@ -35,6 +41,10 @@ export const TermsPage: React.FC = () => {
           You are responsible for maintaining the confidentiality of your account and for all
           activities under your account. You must provide accurate information and keep it up to date.
           We may suspend or terminate access if we reasonably believe you have violated these Terms.
+        </p>
+        <p className="text-zinc-600 leading-relaxed">
+          Sign-in may be provided via third-party authentication (for example, Google OAuth via
+          Supabase Auth).
         </p>
       </section>
 
@@ -48,6 +58,10 @@ export const TermsPage: React.FC = () => {
         <p className="text-zinc-600 leading-relaxed">
           You represent that you have the necessary rights to submit User Content and that doing so
           does not violate applicable law or third-party rights.
+        </p>
+        <p className="text-zinc-600 leading-relaxed">
+          If you use public forms, you are responsible for what you ask respondents to submit and for
+          providing any notices or consents required for your use of the collected responses.
         </p>
       </section>
 

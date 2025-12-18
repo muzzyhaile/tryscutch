@@ -5,6 +5,12 @@ type CookieConsent = 'accepted' | 'declined' | null;
 // Versioned key so we can re-prompt users when the banner copy/behavior changes.
 const STORAGE_KEY = 'scutch_cookie_consent_v2';
 
+declare global {
+  interface Window {
+    __SCUTCH_LOAD_GA__?: () => void;
+  }
+}
+
 export const CookieBanner: React.FC = () => {
   const [consent, setConsent] = useState<CookieConsent>(null);
   const [ready, setReady] = useState(false);
@@ -29,6 +35,14 @@ export const CookieBanner: React.FC = () => {
       // ignore
     }
     setConsent(value);
+
+    if (value === 'accepted') {
+      try {
+        window.__SCUTCH_LOAD_GA__?.();
+      } catch {
+        // ignore
+      }
+    }
   }, []);
 
   if (!ready || consent) return null;

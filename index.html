@@ -109,6 +109,43 @@
       };
     </script>
 
+    <script>
+      // Consent-gated Google Analytics (GA4)
+      // Only loads when the user has accepted optional cookies.
+      (function () {
+        const STORAGE_KEY = 'scutch_cookie_consent_v2';
+        const MEASUREMENT_ID = 'G-33NGP3FZK4';
+
+        function loadGA() {
+          if (window.__SCUTCH_GA_LOADED__) return;
+          window.__SCUTCH_GA_LOADED__ = true;
+
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            window.dataLayer.push(arguments);
+          }
+          window.gtag = window.gtag || gtag;
+
+          gtag('js', new Date());
+          gtag('config', MEASUREMENT_ID);
+
+          const s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(MEASUREMENT_ID);
+          document.head.appendChild(s);
+        }
+
+        window.__SCUTCH_LOAD_GA__ = loadGA;
+
+        try {
+          const consent = window.localStorage.getItem(STORAGE_KEY);
+          if (consent === 'accepted') loadGA();
+        } catch {
+          // ignore
+        }
+      })();
+    </script>
+
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",

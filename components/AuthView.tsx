@@ -92,6 +92,10 @@ export const AuthView: React.FC = () => {
             <div className="text-xs text-zinc-500 leading-relaxed">
               This app uses Supabase Auth with Google OAuth. Your workspace data is private and secured with Row Level Security.
             </div>
+
+            <div className="text-[11px] text-zinc-400 leading-relaxed">
+              By continuing, you agree to our <a className="underline underline-offset-4 hover:text-zinc-700 transition-colors" href="/terms">Terms</a> and <a className="underline underline-offset-4 hover:text-zinc-700 transition-colors" href="/privacy">Privacy Policy</a>.
+            </div>
           </div>
         </div>
       </div>
