@@ -91,8 +91,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             <span>clarity, in minutes.</span>
           </h1>
           <p className="text-xl md:text-2xl text-zinc-500 max-w-3xl mx-auto font-light leading-snug">
-            Upload a file, get automatic themes, sentiment, and insights. <br className="hidden md:block"/>
-            <span className="text-zinc-950 font-semibold">No integrations. No setup. No noise.</span>
+            Upload a file, get structured themes, sentiment signals, and a clear summary you can act on.
+            <br className="hidden md:block" />
+            <span className="text-zinc-950 font-semibold">Built for fast synthesis — not dashboards.</span>
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
@@ -117,19 +118,90 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
         </div>
       </section>
 
+      {/* Target group + value proposition (no blanket claims) */}
+      <section className="pb-10 px-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="rounded-[2rem] border border-zinc-200 bg-white p-8">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-zinc-950">Target group</h2>
+              <p className="mt-2 text-zinc-600 leading-relaxed">
+                Teams that collect lots of qualitative feedback and need a reliable way to summarize it quickly.
+              </p>
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { title: 'Founders', desc: 'Turn “we heard…” into actual patterns.' },
+                  { title: 'Product & PM', desc: 'Prioritize with evidence, not anecdotes.' },
+                  { title: 'UX / Research', desc: 'Synthesize studies and open-text at scale.' },
+                  { title: 'Customer Success', desc: 'Spot recurring pain before churn.' },
+                ].map((item, i) => (
+                  <div key={i} className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+                    <div className="text-sm font-bold text-zinc-950">{item.title}</div>
+                    <div className="mt-1 text-sm text-zinc-600">{item.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border border-zinc-200 bg-white p-8">
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-zinc-950">Value proposition</h2>
+              <p className="mt-2 text-zinc-600 leading-relaxed">
+                A faster path from raw text → themes → decisions. You upload feedback, then review clusters and summaries instead of manually tagging every line.
+              </p>
+
+              <div className="mt-6 space-y-3">
+                {[
+                  { title: 'Reduce manual coding', desc: 'Spend time reviewing patterns instead of building them from scratch.' },
+                  { title: 'Make insights shareable', desc: 'Exportable summaries your team can read in minutes.' },
+                  { title: 'Keep it simple', desc: 'Designed to be used weekly, not “set up once.”' },
+                ].map((item, i) => (
+                  <div key={i} className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
+                    <div className="text-sm font-bold text-zinc-950">{item.title}</div>
+                    <div className="mt-1 text-sm text-zinc-600">{item.desc}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-zinc-200 bg-white p-4">
+                <div className="text-sm font-bold text-zinc-950">Numbers (reference points, not promises)</div>
+                <div className="mt-2 text-sm text-zinc-600 leading-relaxed">
+                  We don’t publish blanket claims like “save 50%” because it depends on your workflow and dataset size.
+                  Here’s a simple way to estimate impact.
+                </div>
+                <div className="mt-3 rounded-xl border border-zinc-100 bg-zinc-50 p-4">
+                  <div className="text-xs font-bold tracking-widest uppercase text-zinc-500">Example math</div>
+                  <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-zinc-700">
+                    <div>
+                      <span className="font-bold text-zinc-950">Manual time</span> ≈ (items) × (minutes per item)
+                    </div>
+                    <div>
+                      <span className="font-bold text-zinc-950">With Scutch</span> ≈ (items) × (seconds to review per item) + (minutes to read summary)
+                    </div>
+                    <div className="mt-2 text-zinc-600">
+                      Example scenario: 1,000 items, manual = 60 sec/item → ~16.7 hours.
+                      If you can shift to review = 10 sec/item + 30 min summary → ~3.3 hours.
+                      That’s ~80% less time <span className="font-semibold">in this example</span>.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Value Prop */}
       <section className="py-24 px-6 bg-white border-t border-zinc-100">
         <div className="max-w-4xl mx-auto text-center mb-20">
            <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-6 leading-tight">Finally, a VoC tool that is <br/> simple, calm, and powerful.</h2>
            <p className="text-lg md:text-xl text-zinc-500 max-w-3xl mx-auto leading-relaxed font-light">
              Most feedback tools are bloated, noisy, and require heavy integrations. <br/>
-             <strong className="text-zinc-950 font-bold">This one does not.</strong> Upload your data and see what matters immediately.
+             <strong className="text-zinc-950 font-bold">This one does not.</strong> Upload your data and focus on the patterns.
            </p>
         </div>
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
-                { title: "Understand Sentiment", desc: "Instantly gauge how customers feel about specific features.", icon: <TrendingUp className="w-8 h-8"/> },
+                { title: "Understand Sentiment", desc: "Quickly gauge how customers feel about specific features.", icon: <TrendingUp className="w-8 h-8"/> },
                 { title: "Spot Rising Issues", desc: "Identify emerging problems before they explode into churn.", icon: <Zap className="w-8 h-8"/> },
                 { title: "Prioritize Confidence", desc: "Data-backed evidence for your next roadmap decision.", icon: <CheckCircle2 className="w-8 h-8"/> }
             ].map((item, i) => (
@@ -159,7 +231,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                             <Layers className="w-7 h-7 text-white" />
                         </div>
                         <h3 className="text-3xl font-bold mb-4 tracking-tight">Automatic Clustering</h3>
-                        <p className="text-zinc-400 text-lg max-w-lg leading-relaxed">Upload your feedback and receive clear, human-readable themes. No manual tagging required. It just works.</p>
+                        <p className="text-zinc-400 text-lg max-w-lg leading-relaxed">Upload your feedback and receive clear, human-readable themes. No manual tagging required. Designed to work out of the box.</p>
                     </div>
                     {/* Visual Decor */}
                     <div className="absolute right-0 bottom-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500">
@@ -174,13 +246,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 <div className="bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-800 hover:border-zinc-700 transition-colors hover:-translate-y-1 duration-300">
                     <BarChart3 className="w-8 h-8 text-zinc-500 mb-4" />
                     <h3 className="text-xl font-bold mb-2">Stable Taxonomy</h3>
-                    <p className="text-zinc-400 text-base">Clusters remain consistent over time, not random like typical AI.</p>
+                  <p className="text-zinc-400 text-base">Designed to keep clusters consistent over time.</p>
                 </div>
 
                  <div className="bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-800 hover:border-zinc-700 transition-colors hover:-translate-y-1 duration-300">
                     <Zap className="w-8 h-8 text-zinc-500 mb-4" />
                     <h3 className="text-xl font-bold mb-2">Emerging Issues</h3>
-                    <p className="text-zinc-400 text-base">Spot topics growing faster than the rest immediately.</p>
+                    <p className="text-zinc-400 text-base">Spot topics growing faster than the rest sooner.</p>
                 </div>
 
                 <div className="bg-zinc-900 p-8 rounded-[2.5rem] border border-zinc-800 hover:border-zinc-700 transition-colors hover:-translate-y-1 duration-300">
@@ -242,7 +314,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                  </div>
                  <div className="bg-white p-8 rounded-[2rem] border border-zinc-200 hover:shadow-xl transition-shadow">
                      <h4 className="text-xl font-bold mb-3 text-zinc-950">UX Researchers</h4>
-                     <p className="text-zinc-600 text-base leading-relaxed">Turn qualitative chaos into structured insights in seconds.</p>
+                   <p className="text-zinc-600 text-base leading-relaxed">Turn qualitative chaos into structured insights faster.</p>
                  </div>
                  <div className="bg-white p-8 rounded-[2rem] border border-zinc-200 hover:shadow-xl transition-shadow">
                      <h4 className="text-xl font-bold mb-3 text-zinc-950">Customer Success</h4>
