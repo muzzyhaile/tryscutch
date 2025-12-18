@@ -4,6 +4,7 @@ import { IngestionWizard } from './components/IngestionWizard';
 import { AnalysisView } from './components/AnalysisView';
 import { LandingPage } from './components/LandingPage';
 import { SettingsView } from './components/SettingsView';
+import { InviteGate } from './components/InviteGate';
 import { BillingView } from './components/BillingView';
 import { ContextManager } from './components/ContextManager';
 import { FormBuilder } from './components/FormBuilder';
@@ -45,6 +46,18 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
+function isMissingInviteSchemaError(err: any): boolean {
+  const msg = String(err?.message ?? '');
+  const code = String(err?.code ?? '');
+  // Postgres / PostgREST variations. We keep this intentionally loose to prevent
+  // accidentally locking out the app if the migrations haven't been applied yet.
+  if (code === '42P01' || code === '42883') return true;
+  if (/invite_redemptions|invites|scutch_redeem_invite|scutch_create_invite/i.test(msg)) {
+    if (/does not exist|not found|could not find|unknown function|schema cache/i.test(msg)) return true;
+  }
+  return false;
+}
+
 const App: React.FC = () => {
   const initialPath = window.location.pathname;
   const initialFormMatch = initialPath.match(/\/f\/([^/]+)/);
@@ -70,6 +83,8 @@ const App: React.FC = () => {
   const [serverPlanId, setServerPlanId] = useState<PlanId>('free');
   const [orgName, setOrgName] = useState<string>('');
   const [orgSlug, setOrgSlug] = useState<string>('');
+  const [hasInviteAccess, setHasInviteAccess] = useState<boolean>(false);
+  const [isInviteAccessLoading, setIsInviteAccessLoading] = useState<boolean>(false);
 
   const navigateTo = (path: string, nextView: ViewState) => {
     window.history.pushState({}, '', path);
@@ -92,6 +107,24 @@ const App: React.FC = () => {
   useEffect(() => {
     const applyRoute = () => {
       const path = window.location.pathname;
+
+      // Invite link route: /invite/:code
+      const inviteMatch = path.match(/^\/invite\/([^/]+)$/);
+      if (inviteMatch) {
+        try {
+          localStorage.setItem('scutch_invite_code', inviteMatch[1]);
+        } catch {
+          // ignore
+        }
+
+        // Bounce to home; after login we will redeem.
+        window.history.replaceState({}, '', '/');
+        setIsFormView(false);
+        setFormIdParam(null);
+        setIsPrintMode(false);
+        setView(VIEW_STATES.LANDING);
+        return;
+      }
 
       // Public form route.
       const formMatch = path.match(/\/f\/([^/]+)/);
@@ -158,6 +191,92 @@ const App: React.FC = () => {
     }
     return () => window.removeEventListener('popstate', onPopState);
   }, [projects]);
+
+  // Redeem invite code after login (if present), and check access.
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId) {
+      setHasInviteAccess(false);
+      setIsInviteAccessLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const run = async () => {
+      setIsInviteAccessLoading(true);
+      try {
+        // Attempt redemption if code exists.
+        let storedCode: string | null = null;
+        try {
+          storedCode = localStorage.getItem('scutch_invite_code');
+        } catch {
+          storedCode = null;
+        }
+
+        if (storedCode) {
+          const { data, error } = await supabase.rpc('scutch_redeem_invite', { p_code: storedCode });
+          if (error) {
+            // If invites aren't deployed yet, fail open (no lockout), and keep code for later.
+            if (isMissingInviteSchemaError(error)) {
+              if (!cancelled) {
+                setHasInviteAccess(true);
+              }
+              return;
+            }
+            // For invalid codes, clear so we don't spam retries.
+            if (/invalid_invite|already_redeemed/i.test(String((error as any)?.message ?? ''))) {
+              try {
+                localStorage.removeItem('scutch_invite_code');
+              } catch {
+                // ignore
+              }
+            }
+          } else {
+            const row = Array.isArray(data) ? data[0] : data;
+            const bonusGranted = !!(row as any)?.bonus_granted;
+            const bonusAmount = Number((row as any)?.bonus_amount_items ?? 0);
+            try {
+              localStorage.removeItem('scutch_invite_code');
+            } catch {
+              // ignore
+            }
+            if (bonusGranted && Number.isFinite(bonusAmount) && bonusAmount > 0) {
+              notify({ type: 'success', message: `Invite redeemed — you received ${bonusAmount} bonus credits.` });
+            }
+          }
+        }
+
+        // Check access (existing users are grandfathered in by a system redemption).
+        const { data: redemption, error: selErr } = await supabase
+          .from('invite_redemptions')
+          .select('id')
+          .eq('invited_user_id', userId)
+          .maybeSingle();
+        if (selErr) {
+          if (isMissingInviteSchemaError(selErr)) {
+            if (!cancelled) {
+              setHasInviteAccess(true);
+            }
+            return;
+          }
+          throw selErr;
+        }
+        if (!cancelled) {
+          setHasInviteAccess(!!redemption?.id);
+        }
+      } catch {
+        if (!cancelled) setHasInviteAccess(false);
+      } finally {
+        if (!cancelled) setIsInviteAccessLoading(false);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, notify]);
 
   // Update form response counts
   useEffect(() => {
@@ -313,6 +432,63 @@ const App: React.FC = () => {
       <>
         <CookieBanner />
         <AuthView />
+      </>
+    );
+  }
+
+  // Avoid flashing the invite gate before we've checked.
+  if (isInviteAccessLoading) {
+    return (
+      <>
+        <CookieBanner />
+        <div className="min-h-screen bg-white text-zinc-950 flex items-center justify-center">
+          <div className="flex items-center gap-3 text-zinc-600 font-semibold">
+            <Loader2 className="animate-spin" /> Loading…
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Invite gate: require an invite redemption before entering the app.
+  // Existing users are grandfathered in by a system redemption row.
+  if (!hasInviteAccess) {
+    return (
+      <>
+        <CookieBanner />
+        <Layout
+          user={{
+            name: (user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? user?.email ?? 'Account') as string,
+            email: user?.email ?? undefined,
+            avatarUrl: (user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture) as string | undefined,
+          }}
+          currentPlanName={PLAN_CATALOG[serverPlanId]?.name}
+          workspaceLabel={(user?.email?.split('@')?.[1] ?? 'Personal') as string}
+          onNewProject={() => setView(VIEW_STATES.NEW)}
+          onGoHome={() => setView(VIEW_STATES.LIST)}
+          onSettings={() => setView(VIEW_STATES.SETTINGS)}
+          onBilling={() => setView(VIEW_STATES.BILLING)}
+          onHelp={() => setView(VIEW_STATES.HELP)}
+          onContextLibrary={() => setView(VIEW_STATES.CONTEXT)}
+          onFeedbackLibrary={() => setView(VIEW_STATES.FEEDBACK)}
+          onForms={() => setView(VIEW_STATES.FORMS)}
+          onResponses={() => setView(VIEW_STATES.RESPONSES)}
+          onPrivacy={() => navigateTo(ROUTES.PRIVACY, VIEW_STATES.PRIVACY)}
+          onTerms={() => navigateTo(ROUTES.TERMS, VIEW_STATES.TERMS)}
+          onImpressum={() => navigateTo(ROUTES.IMPRESSUM, VIEW_STATES.IMPRESSUM)}
+          currentProjectName={'Invite Required'}
+          onLogout={() => signOut()}
+        >
+          <InviteGate
+            userId={user.id}
+            onRedeemed={(bonusGranted, bonusAmount) => {
+              setHasInviteAccess(true);
+              if (bonusGranted && bonusAmount > 0) {
+                notify({ type: 'success', message: `Activated — you received ${bonusAmount} bonus credits.` });
+              }
+            }}
+          />
+        </Layout>
       </>
     );
   }

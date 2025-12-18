@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Scutch by Triscutch</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Fonts are now self-hosted via @fontsource/inter for better security and performance -->
     <style>
       body {
         font-family: 'Inter', sans-serif;
@@ -69,12 +69,12 @@
     </style>
 
     <script>
-      // Public runtime config (safe to expose; required for static hosting).
-      // Prefer setting VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY at build time,
-      // but this fallback prevents a broken build when those env vars are missing.
+      // Public runtime config - injected at build time from environment variables
+      // Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in your .env.local file
+      // These placeholders are replaced during build by Vite
       window.__CLARITY_PUBLIC_CONFIG__ = {
-        supabaseUrl: 'https://hxefkkruzdhxgsvgagsu.supabase.co',
-        supabasePublishableKey: 'sb_publishable_TU_j2YfW_WD94p5jvu_Msw_8TWrvm8R'
+        supabaseUrl: '%VITE_SUPABASE_URL%' || undefined,
+        supabasePublishableKey: '%VITE_SUPABASE_PUBLISHABLE_KEY%' || undefined
       };
     </script>
 </head>

@@ -1,7 +1,17 @@
-// @ts-nocheck
+/**
+ * Gemini Edge Function - AI-powered feedback analysis
+ *
+ * Security features:
+ * - Rate limiting (5 requests/min for expensive ops, 100/min global)
+ * - User authentication required
+ * - Row-level security on database operations
+ * - Quota enforcement based on subscription plan
+ */
+
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient, SupabaseClient, User } from "npm:@supabase/supabase-js@2";
+import { checkRateLimit, RATE_LIMITS, rateLimitHeaders } from "../_shared/ratelimit.ts";
 
 type GeminiAction =
   | "analyzeFeedbackBatch"
@@ -11,6 +21,26 @@ type GeminiAction =
   | "translateText";
 
 type JsonRecord = Record<string, unknown>;
+
+interface GeminiRequestBody {
+  action?: GeminiAction;
+  model?: string;
+  feedbackItems?: string[];
+  context?: string;
+  clusterName?: string;
+  clusters?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    sentimentScore: number;
+    priorityScore: number;
+    itemCount: number;
+  }>;
+  category?: string;
+  query?: string;
+  text?: string;
+  targetLanguage?: string;
+}
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -39,7 +69,7 @@ function stripCodeFences(text: string): string {
   return trimmed;
 }
 
-async function requireUser(req: Request) {
+async function requireUser(req: Request): Promise<User | null> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -70,7 +100,7 @@ async function requireUser(req: Request) {
   return data.user ?? null;
 }
 
-function createAuthedSupabaseClient(params: { req: Request }) {
+function createAuthedSupabaseClient(params: { req: Request }): SupabaseClient {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const authHeader = params.req.headers.get("Authorization") ?? "";
@@ -93,7 +123,7 @@ function createAuthedSupabaseClient(params: { req: Request }) {
   });
 }
 
-function createServiceSupabaseClient() {
+function createServiceSupabaseClient(): SupabaseClient {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -110,7 +140,7 @@ function createServiceSupabaseClient() {
   });
 }
 
-async function ensurePersonalOrgAndMembership(params: { supabaseAdmin: any; userId: string }) {
+async function ensurePersonalOrgAndMembership(params: { supabaseAdmin: SupabaseClient; userId: string }): Promise<void> {
   const { supabaseAdmin, userId } = params;
 
   // Personal org: org_id == user_id.
@@ -163,7 +193,7 @@ function estimateCharsForAnalysis(params: { feedbackItems: string[]; context?: s
   return itemsChars + contextChars;
 }
 
-function quotaErrorMessage(error: any): string {
+function quotaErrorMessage(error: unknown): string {
   const raw = String(error?.message ?? "");
   if (raw.includes("over_monthly_limit")) {
     return "You’ve hit your monthly analysis limit. Upgrade your plan to continue.";
@@ -180,7 +210,7 @@ function quotaErrorMessage(error: any): string {
   return "Usage limit reached. Please upgrade your plan to continue.";
 }
 
-function isQuotaError(error: any): boolean {
+function isQuotaError(error: unknown): boolean {
   const raw = String(error?.message ?? "");
   return (
     raw.includes("over_monthly_limit") ||
@@ -265,6 +295,29 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(401, { error: "Unauthorized" });
     }
 
+    // Apply global rate limit per user (100 requests per minute across all actions)
+    const globalRateLimit = checkRateLimit(
+      `global:${user.id}`,
+      RATE_LIMITS.GENEROUS
+    );
+
+    if (!globalRateLimit.allowed) {
+      return new Response(
+        JSON.stringify({
+          error: "Rate limit exceeded. Please slow down your requests.",
+          retryAfter: globalRateLimit.retryAfter,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            ...rateLimitHeaders(globalRateLimit),
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
     const supabase = createAuthedSupabaseClient({ req });
     const supabaseAdmin = createServiceSupabaseClient();
     await ensurePersonalOrgAndMembership({ supabaseAdmin, userId: user.id });
@@ -274,7 +327,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(500, { error: "Missing GEMINI_API_KEY secret" });
     }
 
-    const body = (await req.json().catch(() => null)) as any;
+    const body = (await req.json().catch(() => null)) as GeminiRequestBody | null;
     const action = body?.action as GeminiAction | undefined;
 
     if (!action) {
@@ -284,6 +337,29 @@ Deno.serve(async (req: Request) => {
     const model = (body?.model as string | undefined) ?? "gemini-2.5-flash";
 
     if (action === "analyzeFeedbackBatch") {
+      // Strict rate limit for expensive AI analysis (5 per minute)
+      const actionRateLimit = checkRateLimit(
+        `action:analyzeFeedbackBatch:${user.id}`,
+        RATE_LIMITS.STRICT
+      );
+
+      if (!actionRateLimit.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "Too many analysis requests. Please wait before trying again.",
+            retryAfter: actionRateLimit.retryAfter,
+          }),
+          {
+            status: 429,
+            headers: {
+              ...corsHeaders,
+              ...rateLimitHeaders(actionRateLimit),
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+
       const feedbackItems = (body?.feedbackItems as string[] | undefined) ?? [];
       const context = (body?.context as string | undefined) ?? undefined;
 
@@ -479,6 +555,29 @@ Return ONLY valid JSON with this shape:
     }
 
     if (action === "generateMarketResearch") {
+      // Strict rate limit for expensive research operations (5 per minute)
+      const actionRateLimit = checkRateLimit(
+        `action:generateMarketResearch:${user.id}`,
+        RATE_LIMITS.STRICT
+      );
+
+      if (!actionRateLimit.allowed) {
+        return new Response(
+          JSON.stringify({
+            error: "Too many research requests. Please wait before trying again.",
+            retryAfter: actionRateLimit.retryAfter,
+          }),
+          {
+            status: 429,
+            headers: {
+              ...corsHeaders,
+              ...rateLimitHeaders(actionRateLimit),
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      }
+
       const category = (body?.category as string | undefined) ?? "other";
       const query = (body?.query as string | undefined) ?? "";
       const context = (body?.context as string | undefined) ?? undefined;

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { User, Lock, Trash2, Bell, Save, CreditCard, Building2 } from 'lucide-react';
+import { User, Lock, Trash2, Bell, Save, CreditCard, Building2, Link as LinkIcon, Copy, Check } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { slugify } from '../lib/slug';
 
@@ -14,6 +14,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
     const [isSavingOrg, setIsSavingOrg] = useState(false);
     const [orgError, setOrgError] = useState<string | null>(null);
     const [orgSaved, setOrgSaved] = useState(false);
+    const [inviteLink, setInviteLink] = useState<string>('');
+    const [inviteError, setInviteError] = useState<string | null>(null);
+    const [isInviteLoading, setIsInviteLoading] = useState(false);
+    const [inviteCopied, setInviteCopied] = useState(false);
 
     const nextSlug = useMemo(() => slugify(publicOrgName), [publicOrgName]);
 
@@ -104,6 +108,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
         }
     };
 
+    const generateInvite = async () => {
+        if (!userId) return;
+        setInviteError(null);
+        setIsInviteLoading(true);
+        setInviteCopied(false);
+        try {
+            const { data, error } = await supabase.rpc('scutch_create_invite');
+            if (error) throw error;
+            const row = Array.isArray(data) ? data[0] : data;
+            const code = (row as any)?.code as string | undefined;
+            if (!code) throw new Error('Failed to generate invite code');
+            setInviteLink(`${window.location.origin}/invite/${code}`);
+        } catch (e: any) {
+            setInviteError(e?.message ?? 'Failed to generate invite link');
+        } finally {
+            setIsInviteLoading(false);
+        }
+    };
+
+    const copyInvite = async () => {
+        if (!inviteLink) return;
+        try {
+            await navigator.clipboard.writeText(inviteLink);
+            setInviteCopied(true);
+            setTimeout(() => setInviteCopied(false), 2000);
+        } catch {
+            // ignore
+        }
+    };
+
   return (
     <div className="space-y-12 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-4 border-b border-zinc-100 pb-8">
@@ -162,6 +196,58 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
                             >
                                 {isSavingOrg ? 'Saving…' : 'Save Public Name'}
                             </button>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Invites */}
+                <section className="space-y-6">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-3 bg-zinc-100 rounded-xl">
+                            <LinkIcon className="w-6 h-6 text-zinc-950" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-zinc-950 tracking-tight">Invites</h2>
+                    </div>
+
+                    <div className="p-6 rounded-3xl border border-zinc-100 bg-zinc-50/50 space-y-4">
+                        <p className="text-sm text-zinc-600">
+                            Invite someone with a link. When they join using your invite, they get 1,000 bonus credits.
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                            <button
+                                type="button"
+                                onClick={generateInvite}
+                                disabled={!userId || isInviteLoading}
+                                className="px-6 py-4 bg-zinc-950 text-white font-bold rounded-2xl hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isInviteLoading ? 'Generating…' : 'Generate Invite Link'}
+                            </button>
+
+                            {inviteLink && (
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={inviteLink}
+                                        readOnly
+                                        className="flex-1 px-4 py-3 rounded-2xl border-2 border-zinc-100 bg-white text-zinc-700 font-mono text-sm"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={copyInvite}
+                                        className="px-4 py-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold"
+                                        title="Copy"
+                                    >
+                                        {inviteCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                                    </button>
+                                </div>
+                            )}
+
+                            {inviteError && (
+                                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                                    <p className="text-sm font-semibold text-rose-700">{inviteError}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </section>
