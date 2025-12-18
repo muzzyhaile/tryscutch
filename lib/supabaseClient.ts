@@ -8,12 +8,14 @@ type ClarityPublicConfig = {
 
 declare global {
   interface Window {
-    __CLARITY_PUBLIC_CONFIG__?: ClarityPublicConfig;
+    __SCUTCH_PUBLIC_CONFIG__?: ScutchPublicConfig;
   }
 }
 
-const runtimeConfig: ClarityPublicConfig | undefined =
-  typeof window !== 'undefined' ? window.__CLARITY_PUBLIC_CONFIG__ : undefined;
+type ScutchPublicConfig = ClarityPublicConfig;
+
+const runtimeConfig: ScutchPublicConfig | undefined =
+  typeof window !== 'undefined' ? window.__SCUTCH_PUBLIC_CONFIG__ : undefined;
 
 function normalizePublicEnv(value: string | undefined): string | undefined {
   if (!value) return undefined;
