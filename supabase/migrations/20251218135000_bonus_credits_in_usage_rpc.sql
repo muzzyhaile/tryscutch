@@ -1,6 +1,10 @@
 -- Allow one-time bonus credits (items) to cover overage beyond monthly plan cap.
 -- This updates the authoritative quota RPC used by the Gemini Edge Function.
 
+-- Postgres does not allow changing a function's OUT/return row type via CREATE OR REPLACE.
+-- Drop first to ensure compatibility with any previous definition.
+drop function if exists public.scutch_consume_monthly_usage(uuid, bigint, bigint);
+
 create or replace function public.scutch_consume_monthly_usage(
   p_org_id uuid,
   p_items_delta bigint,
@@ -141,3 +145,5 @@ begin
   select v_month, v_plan_id, v_used, v_monthly_limit;
 end;
 $$;
+
+grant execute on function public.scutch_consume_monthly_usage(uuid, bigint, bigint) to authenticated;
