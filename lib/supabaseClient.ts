@@ -37,6 +37,16 @@ const supabaseAnonKey =
 const supabaseKey = supabasePublishableKey || supabaseAnonKey;
 
 if (!supabaseUrl || !supabaseKey) {
+  // Helpful diagnostics (does not log secrets/values)
+  // This is mainly for hosted builds where env var injection might be misconfigured.
+  // eslint-disable-next-line no-console
+  console.error('[config] Supabase env missing', {
+    hasUrl: Boolean(supabaseUrl),
+    hasPublishableKey: Boolean(supabasePublishableKey),
+    hasAnonKey: Boolean(supabaseAnonKey),
+    mode: import.meta.env.MODE,
+    isDev: import.meta.env.DEV,
+  });
   // Keep the thrown error clear; without these the app cannot auth/query.
   throw new Error(
     'Missing Supabase env vars: VITE_SUPABASE_URL and either VITE_SUPABASE_PUBLISHABLE_KEY (preferred) or VITE_SUPABASE_ANON_KEY'
