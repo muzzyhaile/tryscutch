@@ -183,19 +183,19 @@ const App: React.FC = () => {
         // Production-safe bootstrap:
         // - Avoid upserts into RLS-protected tables (can require UPDATE permission and cause 403s).
         // - Insert and ignore duplicates, then read.
-        const orgInsert = await supabase.from('organizations').insert({ id: userId, name: 'Personal' });
-        if (orgInsert.error && orgInsert.error.code !== '23505') {
-          // Ignore duplicate key, surface everything else.
-          throw orgInsert.error;
-        }
+        // Use upsert + ignoreDuplicates to avoid noisy duplicate-key 409s.
+        const orgUpsert = await supabase
+          .from('organizations')
+          .upsert({ id: userId, name: 'Personal' }, { onConflict: 'id', ignoreDuplicates: true });
+        if (orgUpsert.error) throw orgUpsert.error;
 
-        const memberInsert = await supabase
+        const memberUpsert = await supabase
           .from('organization_members')
-          .insert({ org_id: userId, user_id: userId, role: 'owner' });
-        if (memberInsert.error && memberInsert.error.code !== '23505') {
-          // Duplicate membership is fine.
-          throw memberInsert.error;
-        }
+          .upsert(
+            { org_id: userId, user_id: userId, role: 'owner' },
+            { onConflict: 'org_id,user_id', ignoreDuplicates: true }
+          );
+        if (memberUpsert.error) throw memberUpsert.error;
 
         const { data: orgRow } = await supabase
           .from('organizations')
