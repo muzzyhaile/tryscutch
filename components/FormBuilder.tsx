@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { FeedbackForm, FormQuestion, FormTemplate, FORM_TEMPLATES, FormSettings } from '../types-forms';
 import { Plus, Edit2, Trash2, Copy, ExternalLink, X, Save, Eye, Settings as SettingsIcon, GripVertical, Check } from 'lucide-react';
+import { slugify } from '../lib/slug';
 
 interface FormBuilderProps {
   forms: FeedbackForm[];
   onUpdate: (forms: FeedbackForm[]) => void;
+  publicName?: string;
+  publicSlug?: string;
 }
 
-export const FormBuilder: React.FC<FormBuilderProps> = ({ forms, onUpdate }) => {
+export const FormBuilder: React.FC<FormBuilderProps> = ({ forms, onUpdate, publicName, publicSlug }) => {
   const [selectedForm, setSelectedForm] = useState<FeedbackForm | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
@@ -24,7 +27,13 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ forms, onUpdate }) => 
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   const generateShareableLink = (formId: string) => {
-    return `${window.location.origin}/f/${formId}`;
+    const cleanedSlug = (publicSlug ?? '').trim();
+    if (cleanedSlug) return `${window.location.origin}/${cleanedSlug}/${formId}`;
+
+    const cleanedName = (publicName ?? '').trim();
+    if (!cleanedName) return `${window.location.origin}/f/${formId}`;
+    const slug = slugify(cleanedName) || 'company';
+    return `${window.location.origin}/${slug}/${formId}`;
   };
 
   const handleCreateFromTemplate = (template: FormTemplate) => {
@@ -387,75 +396,78 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ forms, onUpdate }) => 
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
-              {forms.map((form) => (
-                <div key={form.id} className="bg-white p-6 rounded-xl border border-zinc-200 hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h4 className="text-lg font-bold text-zinc-950">{form.name}</h4>
-                        <span className={`text-xs px-2 py-1 rounded font-bold ${form.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500'}`}>
-                          {form.isActive ? 'Active' : 'Inactive'}
-                        </span>
+              {forms.map((form) => {
+                const shareLink = generateShareableLink(form.id);
+                return (
+                  <div key={form.id} className="bg-white p-6 rounded-xl border border-zinc-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="text-lg font-bold text-zinc-950">{form.name}</h4>
+                          <span className={`text-xs px-2 py-1 rounded font-bold ${form.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500'}`}>
+                            {form.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </div>
+                        {form.description && <p className="text-zinc-500 text-sm mb-2">{form.description}</p>}
+                        <div className="flex gap-4 text-xs text-zinc-400">
+                          <span>{form.questions.length} questions</span>
+                          <span>•</span>
+                          <span>{form.responseCount} responses</span>
+                        </div>
                       </div>
-                      {form.description && <p className="text-zinc-500 text-sm mb-2">{form.description}</p>}
-                      <div className="flex gap-4 text-xs text-zinc-400">
-                        <span>{form.questions.length} questions</span>
-                        <span>•</span>
-                        <span>{form.responseCount} responses</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleToggleActive(form.id)}
-                        className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-zinc-950"
-                        title={form.isActive ? 'Deactivate' : 'Activate'}
-                      >
-                        <Eye size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleEditForm(form)}
-                        className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-zinc-950"
-                      >
-                        <Edit2 size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteForm(form.id)}
-                        className="p-2 hover:bg-rose-100 rounded-lg text-zinc-500 hover:text-rose-600"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {form.isActive && (
-                    <div className="pt-4 border-t border-zinc-100">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={form.shareableLink}
-                          readOnly
-                          className="flex-1 px-3 py-2 rounded-lg border border-zinc-200 bg-zinc-50 text-sm font-mono text-zinc-600"
-                        />
+                      <div className="flex gap-2">
                         <button
-                          onClick={() => copyToClipboard(form.shareableLink)}
-                          className="flex items-center gap-2 px-4 py-2 bg-zinc-950 text-white rounded-lg font-bold hover:bg-zinc-800 transition-all text-sm"
+                          onClick={() => handleToggleActive(form.id)}
+                          className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-zinc-950"
+                          title={form.isActive ? 'Deactivate' : 'Activate'}
                         >
-                          {copiedLink === form.shareableLink ? <Check size={16} /> : <Copy size={16} />}
-                          {copiedLink === form.shareableLink ? 'Copied!' : 'Copy Link'}
+                          <Eye size={18} />
                         </button>
-                        <a
-                          href={form.shareableLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-zinc-700 transition-all"
+                        <button
+                          onClick={() => handleEditForm(form)}
+                          className="p-2 hover:bg-zinc-100 rounded-lg text-zinc-500 hover:text-zinc-950"
                         >
-                          <ExternalLink size={18} />
-                        </a>
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteForm(form.id)}
+                          className="p-2 hover:bg-rose-100 rounded-lg text-zinc-500 hover:text-rose-600"
+                        >
+                          <Trash2 size={18} />
+                        </button>
                       </div>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {form.isActive && (
+                      <div className="pt-4 border-t border-zinc-100">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={shareLink}
+                            readOnly
+                            className="flex-1 px-3 py-2 rounded-lg border border-zinc-200 bg-zinc-50 text-sm font-mono text-zinc-600"
+                          />
+                          <button
+                            onClick={() => copyToClipboard(shareLink)}
+                            className="flex items-center gap-2 px-4 py-2 bg-zinc-950 text-white rounded-lg font-bold hover:bg-zinc-800 transition-all text-sm"
+                          >
+                            {copiedLink === shareLink ? <Check size={16} /> : <Copy size={16} />}
+                            {copiedLink === shareLink ? 'Copied!' : 'Copy Link'}
+                          </button>
+                          <a
+                            href={shareLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-zinc-700 transition-all"
+                          >
+                            <ExternalLink size={18} />
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

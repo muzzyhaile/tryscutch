@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FeedbackForm, FormResponse, FormAnswer } from '../types-forms';
 import { Star, Send, CheckCircle } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 
 interface PublicFormProps {
   formId: string;
@@ -29,14 +30,15 @@ export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit 
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errors, setErrors] = useState<{ [questionId: string]: string }>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
-    const foundForm = forms.find(f => f.id === formId);
-    if (foundForm && foundForm.isActive) {
-      setForm(foundForm);
-      // Initialize answers
+    let cancelled = false;
+
+    const initAnswers = (nextForm: FeedbackForm) => {
       const initialAnswers: { [questionId: string]: string | string[] } = {};
-      foundForm.questions.forEach(q => {
+      nextForm.questions.forEach(q => {
         if (q.type === 'checkbox') {
           initialAnswers[q.id] = [];
         } else {
@@ -44,7 +46,79 @@ export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit 
         }
       });
       setAnswers(initialAnswers);
+    };
+
+    const fromLocal = forms.find(f => f.id === formId);
+    if (fromLocal && fromLocal.isActive) {
+      setForm(fromLocal);
+      initAnswers(fromLocal);
+      return;
     }
+
+    const fetchRemote = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('forms')
+          .select('id,name,title,description,questions,schema,is_active,settings,created_at,updated_at,shareable_link')
+          .eq('id', formId)
+          .maybeSingle();
+
+        if (cancelled) return;
+
+        if (error) throw error;
+        if (!data) {
+          setForm(null);
+          return;
+        }
+
+        // RLS should already prevent reading inactive forms, but keep a local guard too.
+        if (!data.is_active) {
+          setForm(null);
+          return;
+        }
+
+        const fallbackName = (data as any).name ?? (data as any).title;
+        const fallbackQuestions = Array.isArray((data as any).questions)
+          ? (data as any).questions
+          : Array.isArray((data as any).schema?.questions)
+            ? (data as any).schema.questions
+            : Array.isArray((data as any).schema?.fields)
+              ? (data as any).schema.fields
+              : [];
+        const fallbackSettings = (data as any).settings ?? (data as any).schema?.settings;
+
+        const nextForm: FeedbackForm = {
+          id: data.id,
+          name: fallbackName ?? 'Feedback Form',
+          description: (data as any).description ?? undefined,
+          questions: fallbackQuestions,
+          isActive: !!data.is_active,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+          shareableLink: data.shareable_link ?? `${window.location.origin}/f/${data.id}`,
+          responseCount: 0,
+          settings: fallbackSettings ?? {
+            allowAnonymous: true,
+            requireEmail: false,
+            showBranding: true,
+            autoImportToAnalysis: false,
+            theme: 'light',
+          },
+        };
+
+        setForm(nextForm);
+        initAnswers(nextForm);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void fetchRemote();
+
+    return () => {
+      cancelled = true;
+    };
   }, [formId, forms]);
 
   const handleAnswerChange = (questionId: string, value: string | string[]) => {
@@ -96,6 +170,7 @@ export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     
     if (!form || !validateForm()) return;
 
@@ -113,15 +188,35 @@ export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit 
       imported: false
     };
 
-    onSubmit(response);
-    setIsSubmitted(true);
+    const submit = async () => {
+      try {
+        const { error } = await supabase
+          .from('form_responses')
+          .insert({
+            id: response.id,
+            form_id: response.formId,
+            submitted_at: response.submittedAt,
+            respondent_email: response.respondentEmail ?? null,
+            answers: response.answers,
+            imported: false,
+          });
+        if (error) throw error;
 
-    // Redirect if configured
-    if (form.settings.redirectUrl) {
-      setTimeout(() => {
-        window.location.href = form.settings.redirectUrl!;
-      }, 2000);
-    }
+        onSubmit(response);
+        setIsSubmitted(true);
+
+        // Redirect if configured
+        if (form.settings.redirectUrl) {
+          setTimeout(() => {
+            window.location.href = form.settings.redirectUrl!;
+          }, 2000);
+        }
+      } catch (err: any) {
+        setSubmitError(err?.message ?? 'Failed to submit feedback. Please try again.');
+      }
+    };
+
+    void submit();
   };
 
   const renderQuestion = (question: FeedbackForm['questions'][0]) => {
@@ -282,6 +377,20 @@ export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit 
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-zinc-950 mb-2">Loading…</h2>
+            <p className="text-zinc-500">Preparing the form.</p>
+          </div>
+        </div>
+        <PublicLegalFooter />
+      </div>
+    );
+  }
+
   if (!form) {
     return (
       <div className="min-h-screen bg-zinc-50 flex flex-col">
@@ -334,6 +443,11 @@ export const PublicForm: React.FC<PublicFormProps> = ({ formId, forms, onSubmit 
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {submitError && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-sm font-semibold text-rose-700">{submitError}</p>
+              </div>
+            )}
             {form.questions
               .sort((a, b) => a.order - b.order)
               .map((question, index) => (

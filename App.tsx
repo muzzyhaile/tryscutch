@@ -41,6 +41,10 @@ function viewForPathname(pathname: string): ViewState {
   return VIEW_STATES.LANDING;
 }
 
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 const App: React.FC = () => {
   const initialPath = window.location.pathname;
   const initialFormMatch = initialPath.match(/\/f\/([^/]+)/);
@@ -64,6 +68,8 @@ const App: React.FC = () => {
   const [isFormView, setIsFormView] = useState(Boolean(initialFormIdParam));
   const [formIdParam, setFormIdParam] = useState<string | null>(initialFormIdParam);
   const [serverPlanId, setServerPlanId] = useState<PlanId>('free');
+  const [orgName, setOrgName] = useState<string>('');
+  const [orgSlug, setOrgSlug] = useState<string>('');
 
   const navigateTo = (path: string, nextView: ViewState) => {
     window.history.pushState({}, '', path);
@@ -93,6 +99,18 @@ const App: React.FC = () => {
         setIsFormView(true);
         setFormIdParam(formMatch[1]);
         return;
+      }
+
+      // Public form route with visible company slug: /:companySlug/:formId
+      // Company slug is cosmetic; lookup is done by formId.
+      const companyMatch = path.match(/^\/([^/]+)\/([^/]+)$/);
+      if (companyMatch) {
+        const maybeFormId = companyMatch[2];
+        if (isUuid(maybeFormId)) {
+          setIsFormView(true);
+          setFormIdParam(maybeFormId);
+          return;
+        }
       }
 
       // Legal routes.
@@ -166,6 +184,16 @@ const App: React.FC = () => {
         await supabase
           .from('organizations')
           .upsert({ id: userId, name: 'Personal' }, { onConflict: 'id', ignoreDuplicates: true });
+
+        const { data: orgRow } = await supabase
+          .from('organizations')
+          .select('name,public_name,public_slug')
+          .eq('id', userId)
+          .maybeSingle();
+        if (!cancelled) {
+          setOrgName((orgRow as any)?.public_name ?? (orgRow as any)?.name ?? '');
+          setOrgSlug((orgRow as any)?.public_slug ?? '');
+        }
         await supabase
           .from('organization_members')
           .upsert(
@@ -465,6 +493,7 @@ const App: React.FC = () => {
     if (view === VIEW_STATES.SETTINGS) {
       return (
         <SettingsView
+          userId={user?.id}
           onBilling={() => {
             setView(VIEW_STATES.BILLING);
             setCurrentProject(null);
@@ -493,7 +522,7 @@ const App: React.FC = () => {
     }
 
     if (view === VIEW_STATES.FORMS) {
-      return <FormBuilder forms={forms} onUpdate={setForms} />;
+      return <FormBuilder forms={forms} onUpdate={setForms} publicName={orgName} publicSlug={orgSlug} />;
     }
 
     if (view === VIEW_STATES.FEEDBACK) {

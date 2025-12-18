@@ -1,11 +1,109 @@
-import React from 'react';
-import { User, Lock, Trash2, Bell, Save, CreditCard } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { User, Lock, Trash2, Bell, Save, CreditCard, Building2 } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
+import { slugify } from '../lib/slug';
 
 type SettingsViewProps = {
     onBilling?: () => void;
+        userId?: string;
 };
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId }) => {
+    const [publicOrgName, setPublicOrgName] = useState('');
+    const [isOrgLoading, setIsOrgLoading] = useState(false);
+    const [isSavingOrg, setIsSavingOrg] = useState(false);
+    const [orgError, setOrgError] = useState<string | null>(null);
+    const [orgSaved, setOrgSaved] = useState(false);
+
+    const nextSlug = useMemo(() => slugify(publicOrgName), [publicOrgName]);
+
+    useEffect(() => {
+        if (!userId) return;
+        let cancelled = false;
+
+        const run = async () => {
+            setIsOrgLoading(true);
+            setOrgError(null);
+            setOrgSaved(false);
+            try {
+                const { data, error } = await supabase
+                    .from('organizations')
+                    .select('name,public_name')
+                    .eq('id', userId)
+                    .maybeSingle();
+                if (error) throw error;
+                if (cancelled) return;
+                setPublicOrgName((data as any)?.public_name ?? (data as any)?.name ?? '');
+            } catch (e: any) {
+                if (!cancelled) setOrgError(e?.message ?? 'Failed to load organization');
+            } finally {
+                if (!cancelled) setIsOrgLoading(false);
+            }
+        };
+
+        void run();
+        return () => {
+            cancelled = true;
+        };
+    }, [userId]);
+
+    const saveOrg = async () => {
+        if (!userId) return;
+        setOrgSaved(false);
+        setOrgError(null);
+
+        const trimmed = publicOrgName.trim();
+        if (!trimmed) {
+            setOrgError('Please enter a public organization name.');
+            return;
+        }
+        const slug = slugify(trimmed);
+        if (!slug) {
+            setOrgError('That name cannot be used. Please choose a different one.');
+            return;
+        }
+
+        setIsSavingOrg(true);
+        try {
+            // Friendly pre-check for duplicates (DB constraint is the real guard).
+            const { data: existing, error: existingErr } = await supabase
+                .from('organizations')
+                .select('id')
+                .neq('id', userId)
+                .ilike('public_slug', slug)
+                .limit(1);
+            if (existingErr) throw existingErr;
+            if ((existing as any[])?.length) {
+                setOrgError('That public organization name is already taken.');
+                return;
+            }
+
+            const { error: updateErr } = await supabase
+                .from('organizations')
+                .update({
+                    // Keep internal name aligned unless you later add a separate internal label.
+                    name: trimmed,
+                    public_name: trimmed,
+                    public_slug: slug,
+                })
+                .eq('id', userId);
+            if (updateErr) throw updateErr;
+
+            setOrgSaved(true);
+            setTimeout(() => setOrgSaved(false), 2000);
+        } catch (e: any) {
+            // If uniqueness is violated despite pre-check, surface a friendly message.
+            const msg = (e?.message ?? '').toString();
+            if (/organizations_public_slug_unique/i.test(msg) || /duplicate key value/i.test(msg)) {
+                setOrgError('That public organization name is already taken.');
+            } else {
+                setOrgError(msg || 'Failed to save organization');
+            }
+        } finally {
+            setIsSavingOrg(false);
+        }
+    };
+
   return (
     <div className="space-y-12 max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="space-y-4 border-b border-zinc-100 pb-8">
@@ -14,6 +112,60 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling }) => {
       </div>
 
       <div className="space-y-12">
+                {/* Organization */}
+                <section className="space-y-6">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-3 bg-zinc-100 rounded-xl">
+                            <Building2 className="w-6 h-6 text-zinc-950" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-zinc-950 tracking-tight">Workspace</h2>
+                    </div>
+
+                    <div className="p-6 rounded-3xl border border-zinc-100 bg-zinc-50/50 space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-zinc-950 uppercase tracking-widest">Public Organization Name</label>
+                            <input
+                                type="text"
+                                value={publicOrgName}
+                                onChange={(e) => {
+                                    setPublicOrgName(e.target.value);
+                                    setOrgSaved(false);
+                                    if (orgError) setOrgError(null);
+                                }}
+                                placeholder="e.g., TechCrunch"
+                                disabled={!userId || isOrgLoading || isSavingOrg}
+                                className="w-full px-6 py-4 text-lg rounded-2xl border-2 border-zinc-100 bg-white text-zinc-900 focus:outline-none focus:border-zinc-950 transition-all font-medium placeholder-zinc-400 disabled:opacity-50"
+                            />
+                            <div className="flex flex-col gap-1">
+                                <p className="text-sm text-zinc-500">This appears in your public form URLs.</p>
+                                <p className="text-xs text-zinc-400">Preview: {window.location.origin}/{nextSlug || 'your-name'}/&lt;formId&gt;</p>
+                            </div>
+                        </div>
+
+                        {orgError && (
+                            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                                <p className="text-sm font-semibold text-rose-700">{orgError}</p>
+                            </div>
+                        )}
+                        {orgSaved && (
+                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                                <p className="text-sm font-semibold text-emerald-700">Saved.</p>
+                            </div>
+                        )}
+
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={saveOrg}
+                                disabled={!userId || isOrgLoading || isSavingOrg}
+                                className="px-6 py-4 bg-zinc-950 text-white font-bold rounded-2xl hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSavingOrg ? 'Saving…' : 'Save Public Name'}
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
         {/* Profile Section */}
         <section className="space-y-6">
            <div className="flex items-center gap-3 mb-6">
