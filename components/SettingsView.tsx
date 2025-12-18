@@ -80,9 +80,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
 
                 const { data: grant, error: grantErr } = await supabase
                     .from('bonus_credits_grants')
-                    .select('amount_items')
+                    .select('amount_items, grant_type, created_at')
                     .eq('org_id', userId)
-                    .eq('grant_type', 'invite_welcome_1000')
+                    .in('grant_type', ['invite_welcome_400', 'invite_welcome_1000'])
+                    .order('created_at', { ascending: false })
+                    .limit(1)
                     .maybeSingle();
                 if (grantErr) throw grantErr;
 
@@ -272,7 +274,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
 
                     <div className="p-6 rounded-3xl border border-zinc-100 bg-zinc-50/50 space-y-4">
                         <p className="text-sm text-zinc-600">
-                            Invite someone with a link. When they join using your invite, they get 1,000 bonus credits.
+                            Invite someone with a link. When they join using your invite, they get 400 bonus credits.
                         </p>
 
                         <div className="flex flex-col gap-3">
