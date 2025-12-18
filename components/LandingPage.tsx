@@ -100,7 +100,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onViewSampleR
           <p className="text-xl md:text-2xl text-zinc-500 max-w-3xl mx-auto font-light leading-snug">
             Upload a CSV/XLSX or paste text. Get clustered themes, sentiment signals, and a summary you can act on.
             <br className="hidden md:block" />
-            <span className="text-zinc-950 font-semibold">Built for fast synthesis — not dashboards.</span>
+            <span className="text-zinc-950 font-semibold">Built for fast synthesis, not dashboards.</span>
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
@@ -219,7 +219,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onViewSampleR
                     <span className="text-sm font-bold text-zinc-950">Still being built</span>
                   </div>
                   <p className="mt-2 text-sm text-zinc-600 leading-relaxed">
-                    You may see changes as we improve reliability, exports, and the analysis output. If something feels off, tell us — early adopters shape the product.
+                    You may see changes as we improve reliability, exports, and the analysis output. If something feels off, tell us. Early adopters shape the product.
                   </p>
                 </div>
               </div>

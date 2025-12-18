@@ -427,7 +427,7 @@ const App: React.FC = () => {
     return (
       <>
         <CookieBanner />
-        <LegalLayout title="Sample report">
+        <LegalLayout title="Sample report" maxWidthClassName="max-w-6xl">
           <SampleReportPage
             onBack={() => navigateTo(ROUTES.HOME, VIEW_STATES.LANDING)}
             onStart={() => setView(VIEW_STATES.LIST)}
