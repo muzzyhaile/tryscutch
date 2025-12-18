@@ -7,7 +7,7 @@ describe('LandingPage', () => {
     const mockOnStart = () => {};
     render(<LandingPage onStart={mockOnStart} />);
     
-    expect(screen.getByText(/Turn raw feedback into/i)).toBeInTheDocument();
+    expect(screen.getByText(/AI feedback analysis/i)).toBeInTheDocument();
   });
 
   it('renders the start button', () => {

@@ -92,12 +92,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               </div>
             </div>
           )}
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-[0.95] text-zinc-950 flex flex-col items-center">
-            <span>An AI customer feedback analysis tool</span>
-            <span>for themes, sentiment, and summaries.</span>
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tighter leading-[0.95] text-zinc-950 flex flex-col items-center">
+            <span>AI feedback analysis</span>
+            <span>for themes, sentiment, summaries.</span>
           </h1>
           <p className="text-xl md:text-2xl text-zinc-500 max-w-3xl mx-auto font-light leading-snug">
-            Upload a CSV/XLSX or paste text. Scutch groups feedback into clear themes, highlights sentiment, and writes a summary you can act on.
+            Upload a CSV/XLSX or paste text. Get clustered themes, sentiment signals, and a summary you can act on.
             <br className="hidden md:block" />
             <span className="text-zinc-950 font-semibold">Built for fast synthesis — not dashboards.</span>
           </p>
