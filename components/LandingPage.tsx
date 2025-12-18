@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowRight, CheckCircle2, Zap, BarChart3, Layers, FileText, Download, TrendingUp } from 'lucide-react';
 
 interface LandingPageProps {
@@ -6,6 +6,32 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('scutch_invite_code');
+      setInviteCode(stored && stored.trim() ? stored.trim() : null);
+    } catch {
+      setInviteCode(null);
+    }
+  }, []);
+
+  const clearInvite = () => {
+    try {
+      localStorage.removeItem('scutch_invite_code');
+    } catch {
+      // ignore
+    }
+    setInviteCode(null);
+  };
+
+  const maskedInviteCode = (code: string) => {
+    const trimmed = code.trim();
+    if (trimmed.length <= 8) return trimmed;
+    return `${trimmed.slice(0, 4)}…${trimmed.slice(-4)}`;
+  };
+
   return (
     <div className="bg-white min-h-screen font-sans text-zinc-950 selection:bg-black selection:text-white flex flex-col">
       {/* Nav */}
@@ -31,6 +57,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
       {/* Hero */}
       <section className="pt-32 pb-20 px-6">
         <div className="max-w-6xl mx-auto text-center space-y-8">
+          {inviteCode && (
+            <div className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-white px-5 py-4 text-left shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-sm font-bold text-zinc-950">Invite detected</div>
+                  <div className="mt-1 text-sm text-zinc-600">
+                    This link saved an invite code (<span className="font-mono font-bold">{maskedInviteCode(inviteCode)}</span>). Sign in to redeem your bonus credits.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearInvite}
+                  className="text-xs font-bold text-zinc-500 hover:text-zinc-950 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={onStart}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-zinc-950 px-5 py-2 text-sm font-bold text-white hover:bg-zinc-800 transition-all"
+                >
+                  Continue to sign in
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter leading-[0.95] text-zinc-950 flex flex-col items-center">
             <span>Turn raw feedback into</span>
             <span>clarity, in minutes.</span>

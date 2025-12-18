@@ -1,9 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { LogIn } from 'lucide-react';
 
 export const AuthView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('scutch_invite_code');
+      setInviteCode(stored && stored.trim() ? stored.trim() : null);
+    } catch {
+      setInviteCode(null);
+    }
+  }, []);
+
+  const clearInvite = () => {
+    try {
+      localStorage.removeItem('scutch_invite_code');
+    } catch {
+      // ignore
+    }
+    setInviteCode(null);
+  };
+
+  const maskedInviteCode = (code: string) => {
+    const trimmed = code.trim();
+    if (trimmed.length <= 8) return trimmed;
+    return `${trimmed.slice(0, 4)}…${trimmed.slice(-4)}`;
+  };
 
   const signInWithGoogle = async () => {
     setIsLoading(true);
@@ -33,6 +58,26 @@ export const AuthView: React.FC = () => {
               <p className="text-zinc-500 mt-1">Sign in with Google to access your workspace data.</p>
             </div>
           </div>
+
+          {inviteCode && (
+            <div className="mt-6 rounded-2xl border border-zinc-200 bg-white px-5 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="text-sm font-bold text-zinc-950">Invite detected</div>
+                  <div className="mt-1 text-sm text-zinc-600">
+                    We’ll apply invite code <span className="font-mono font-bold">{maskedInviteCode(inviteCode)}</span> after you sign in.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearInvite}
+                  className="text-xs font-bold text-zinc-500 hover:text-zinc-950 transition-colors"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="mt-8 space-y-4">
             <button
