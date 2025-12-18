@@ -148,7 +148,7 @@ This document outlines the security measures implemented in Scutch and known vul
 
 ## Reporting Security Issues
 
-If you discover a security vulnerability, please email: security@triscutch.com
+If you discover a security vulnerability, please email: admin@guidingventures.com
 
 Do NOT create a public GitHub issue for security vulnerabilities.
 

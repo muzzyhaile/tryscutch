@@ -1,7 +1,7 @@
 ﻿<div align="center">
   <div style="background-color: black; color: white; width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 24px; margin: 0 auto 20px auto;">C</div>
    <h1>Scutch</h1>
-   <p><strong>Scutch by Triscutch — turn raw feedback into clarity, in minutes.</strong></p>
+   <p><strong>Scutch — turn raw feedback into clarity, in minutes.</strong></p>
 </div>
 
 <br />

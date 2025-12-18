@@ -157,7 +157,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
         if (targetPlanId === planIdFromServer) return;
         if (targetPlanId === 'free') return;
         if (targetPlanId === 'enterprise') {
-            window.location.href = 'mailto:sales@triscutch.com?subject=Scutch%20Enterprise%20Plan';
+            window.location.href = 'mailto:admin@guidingventures.com?subject=Scutch%20Enterprise%20Plan';
             return;
         }
 
@@ -308,7 +308,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                                     alert('Seat management is available on Enterprise.');
                                     return;
                                 }
-                                window.location.href = 'mailto:sales@triscutch.com?subject=Scutch%20Enterprise%20Seat%20Management';
+                                window.location.href = 'mailto:admin@guidingventures.com?subject=Scutch%20Enterprise%20Seat%20Management';
                             }}
                             className="px-6 py-3 bg-white text-zinc-950 font-bold rounded-xl hover:bg-zinc-200 transition-colors"
                         >
