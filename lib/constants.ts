@@ -9,6 +9,7 @@
  */
 export const VIEW_STATES = {
   LANDING: 'landing',
+  SAMPLE_REPORT: 'sample_report',
   LIST: 'list',
   NEW: 'new',
   ANALYSIS: 'analysis',
@@ -43,6 +44,7 @@ export type ProjectStatus = typeof PROJECT_STATUS[keyof typeof PROJECT_STATUS];
 export const ROUTES = {
   FORM: '/f/:formId',
   HOME: '/',
+  SAMPLE_REPORT: '/sample-report',
   PRIVACY: '/privacy',
   TERMS: '/terms',
   IMPRESSUM: '/impressum',

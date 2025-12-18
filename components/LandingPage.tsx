@@ -3,9 +3,10 @@ import { ArrowRight, CheckCircle2, Zap, BarChart3, Layers, FileText, Download, T
 
 interface LandingPageProps {
   onStart: () => void;
+  onViewSampleReport?: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onViewSampleReport }) => {
   const [inviteCode, setInviteCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </button>
             <button 
-                onClick={onStart}
+                onClick={onViewSampleReport ?? onStart}
                 className="w-full sm:w-auto px-8 py-4 bg-white text-zinc-950 border-2 border-zinc-100 text-lg font-bold rounded-full hover:border-zinc-300 hover:bg-zinc-50 transition-all"
             >
               View sample report

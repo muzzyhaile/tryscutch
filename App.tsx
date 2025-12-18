@@ -3,6 +3,7 @@ import { Layout } from './components/Layout';
 import { IngestionWizard } from './components/IngestionWizard';
 import { AnalysisView } from './components/AnalysisView';
 import { LandingPage } from './components/LandingPage';
+import { SampleReportPage } from './components/SampleReportPage';
 import { SettingsView } from './components/SettingsView';
 import { InviteGate } from './components/InviteGate';
 import { BillingView } from './components/BillingView';
@@ -36,6 +37,7 @@ import { logger } from './lib/logger';
 import { VIEW_STATES, ERROR_MESSAGES, CONFIRM_MESSAGES, ROUTES, ViewState } from './lib/constants';
 
 function viewForPathname(pathname: string): ViewState {
+  if (pathname === ROUTES.SAMPLE_REPORT) return VIEW_STATES.SAMPLE_REPORT;
   if (pathname === ROUTES.PRIVACY) return VIEW_STATES.PRIVACY;
   if (pathname === ROUTES.TERMS) return VIEW_STATES.TERMS;
   if (pathname === ROUTES.IMPRESSUM) return VIEW_STATES.IMPRESSUM;
@@ -95,6 +97,17 @@ const App: React.FC = () => {
     setView(nextView);
   };
 
+  const logoutToLanding = () => {
+    // Navigate back to the marketing page immediately.
+    setCurrentProject(null);
+    setView(VIEW_STATES.LANDING);
+    window.history.pushState({}, '', ROUTES.HOME);
+    void signOut().catch((err) => {
+      logger.error('Sign out failed', err, 'App');
+      notify({ type: 'error', message: err instanceof Error ? err.message : ERROR_MESSAGES.SIGN_OUT_FAILED });
+    });
+  };
+
   // If a user arrives already authenticated, skip the marketing landing page.
   useEffect(() => {
     if (!user) return;
@@ -147,6 +160,12 @@ const App: React.FC = () => {
       }
 
       // Legal routes.
+      if (path === ROUTES.SAMPLE_REPORT) {
+        setIsFormView(false);
+        setFormIdParam(null);
+        setView(VIEW_STATES.SAMPLE_REPORT);
+        return;
+      }
       if (path === ROUTES.PRIVACY) {
         setIsFormView(false);
         setFormIdParam(null);
@@ -404,12 +423,29 @@ const App: React.FC = () => {
     );
   }
 
+  if (view === VIEW_STATES.SAMPLE_REPORT) {
+    return (
+      <>
+        <CookieBanner />
+        <LegalLayout title="Sample report">
+          <SampleReportPage
+            onBack={() => navigateTo(ROUTES.HOME, VIEW_STATES.LANDING)}
+            onStart={() => setView(VIEW_STATES.LIST)}
+          />
+        </LegalLayout>
+      </>
+    );
+  }
+
   // Render Landing Page completely separate from the App Layout (show before auth)
   if (view === VIEW_STATES.LANDING) {
     return (
       <>
         <CookieBanner />
-        <LandingPage onStart={() => setView(VIEW_STATES.LIST)} />
+        <LandingPage
+          onStart={() => setView(VIEW_STATES.LIST)}
+          onViewSampleReport={() => navigateTo(ROUTES.SAMPLE_REPORT, VIEW_STATES.SAMPLE_REPORT)}
+        />
       </>
     );
   }
@@ -477,7 +513,7 @@ const App: React.FC = () => {
           onTerms={() => navigateTo(ROUTES.TERMS, VIEW_STATES.TERMS)}
           onImpressum={() => navigateTo(ROUTES.IMPRESSUM, VIEW_STATES.IMPRESSUM)}
           currentProjectName={'Invite Required'}
-          onLogout={() => signOut()}
+          onLogout={logoutToLanding}
         >
           <InviteGate
             userId={user.id}
@@ -846,16 +882,7 @@ const App: React.FC = () => {
             view === VIEW_STATES.IMPRESSUM ? 'Site Notice' :
             currentProject?.name
         }
-        onLogout={() => {
-          // Navigate back to the marketing page immediately.
-          setCurrentProject(null);
-          setView(VIEW_STATES.LANDING);
-          window.history.pushState({}, '', ROUTES.HOME);
-          void signOut().catch((err) => {
-            logger.error('Sign out failed', err, 'App');
-            notify({ type: 'error', message: err instanceof Error ? err.message : ERROR_MESSAGES.SIGN_OUT_FAILED });
-          });
-        }}
+        onLogout={logoutToLanding}
       >
         {renderContent()}
       </Layout>

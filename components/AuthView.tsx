@@ -5,6 +5,7 @@ import { LogIn } from 'lucide-react';
 export const AuthView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [hasAcceptedPrivacy, setHasAcceptedPrivacy] = useState(false);
 
   useEffect(() => {
     try {
@@ -80,9 +81,23 @@ export const AuthView: React.FC = () => {
           )}
 
           <div className="mt-8 space-y-4">
+            <label className="flex items-start gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4"
+                checked={hasAcceptedPrivacy}
+                onChange={(e) => setHasAcceptedPrivacy(e.target.checked)}
+              />
+              <span className="text-xs text-zinc-600 leading-relaxed">
+                I agree to the <a className="underline underline-offset-4 hover:text-zinc-700 transition-colors" href="/terms">Terms</a> and
+                {' '}
+                <a className="underline underline-offset-4 hover:text-zinc-700 transition-colors" href="/privacy">Privacy Policy</a>.
+              </span>
+            </label>
+
             <button
               onClick={() => void signInWithGoogle()}
-              disabled={isLoading}
+              disabled={isLoading || !hasAcceptedPrivacy}
               className="w-full px-10 py-5 bg-zinc-950 text-white text-xl font-bold rounded-2xl hover:bg-zinc-800 transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <LogIn className="w-5 h-5" />
@@ -94,7 +109,7 @@ export const AuthView: React.FC = () => {
             </div>
 
             <div className="text-[11px] text-zinc-400 leading-relaxed">
-              By continuing, you agree to our <a className="underline underline-offset-4 hover:text-zinc-700 transition-colors" href="/terms">Terms</a> and <a className="underline underline-offset-4 hover:text-zinc-700 transition-colors" href="/privacy">Privacy Policy</a>.
+              You can review our policies before signing in.
             </div>
           </div>
         </div>
