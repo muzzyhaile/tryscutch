@@ -15,7 +15,7 @@ Scutch is a powerful Voice of Customer (VoC) tool designed to instantly analyze 
 - **Visual Reports**: Interactive charts and visualizations to understand your data at a glance.
 - **Smart Clustering**: Automatically groups similar feedback into meaningful clusters with priority scores.
 - **Export Options**: Download your analysis as a PDF report or raw JSON data.
-- **Privacy Focused**: Runs locally with your own API key.
+
 
 ## 🚀 Run Locally
 
