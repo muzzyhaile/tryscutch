@@ -12,11 +12,16 @@ import { supabase } from '../lib/supabaseClient';
 type FormRow = {
   id: string;
   user_id: string;
-  name: string;
+  // Legacy schema (still enforced in production)
+  title?: string;
+  schema?: any;
+
+  // New compat schema
+  name?: string;
   description: string | null;
-  questions: any;
+  questions?: any;
   is_active: boolean;
-  settings: any;
+  settings?: any;
   shareable_link: string | null;
   created_at: string;
   updated_at: string;
@@ -39,17 +44,27 @@ function rowToForm(row: FormRow, responseCount: number): FeedbackForm {
   const shareableLink =
     row.shareable_link ?? `${window.location.origin}/f/${row.id}`;
 
+  const name = (row as any).name ?? (row as any).title ?? 'Feedback Form';
+  const questions = Array.isArray((row as any).questions)
+    ? (row as any).questions
+    : Array.isArray((row as any).schema?.questions)
+      ? (row as any).schema.questions
+      : Array.isArray((row as any).schema?.fields)
+        ? (row as any).schema.fields
+        : [];
+  const settings = (row as any).settings ?? (row as any).schema?.settings;
+
   return {
     id: row.id,
-    name: row.name,
+    name,
     description: row.description ?? undefined,
-    questions: Array.isArray(row.questions) ? row.questions : [],
+    questions,
     isActive: row.is_active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     shareableLink,
     responseCount,
-    settings: row.settings ?? {
+    settings: settings ?? {
       allowAnonymous: true,
       requireEmail: false,
       showBranding: true,
@@ -60,14 +75,24 @@ function rowToForm(row: FormRow, responseCount: number): FeedbackForm {
 }
 
 function formToUpsertRow(userId: string, form: FeedbackForm) {
+  const questions = form.questions ?? [];
+  const settings = form.settings ?? {};
   return {
     id: form.id,
     user_id: userId,
+    // Write BOTH schemas:
+    // - legacy: required by the existing production `public.forms` constraints
+    // - new compat columns: used by the current app
+    title: form.name,
+    schema: {
+      questions,
+      settings,
+    },
     name: form.name,
     description: form.description ?? null,
-    questions: form.questions ?? [],
+    questions,
     is_active: form.isActive,
-    settings: form.settings ?? {},
+    settings,
     shareable_link: form.shareableLink ?? null,
   };
 }

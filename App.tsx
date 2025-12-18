@@ -180,10 +180,22 @@ const App: React.FC = () => {
 
     const run = async () => {
       try {
-        // Bootstrap personal org + membership. Subscription is created by Stripe webhook after payment.
-        await supabase
-          .from('organizations')
-          .upsert({ id: userId, name: 'Personal' }, { onConflict: 'id', ignoreDuplicates: true });
+        // Production-safe bootstrap:
+        // - Avoid upserts into RLS-protected tables (can require UPDATE permission and cause 403s).
+        // - Insert and ignore duplicates, then read.
+        const orgInsert = await supabase.from('organizations').insert({ id: userId, name: 'Personal' });
+        if (orgInsert.error && orgInsert.error.code !== '23505') {
+          // Ignore duplicate key, surface everything else.
+          throw orgInsert.error;
+        }
+
+        const memberInsert = await supabase
+          .from('organization_members')
+          .insert({ org_id: userId, user_id: userId, role: 'owner' });
+        if (memberInsert.error && memberInsert.error.code !== '23505') {
+          // Duplicate membership is fine.
+          throw memberInsert.error;
+        }
 
         const { data: orgRow } = await supabase
           .from('organizations')
@@ -194,28 +206,6 @@ const App: React.FC = () => {
           setOrgName((orgRow as any)?.public_name ?? (orgRow as any)?.name ?? '');
           setOrgSlug((orgRow as any)?.public_slug ?? '');
         }
-        await supabase
-          .from('organization_members')
-          .upsert(
-            { org_id: userId, user_id: userId, role: 'owner' },
-            { onConflict: 'org_id,user_id', ignoreDuplicates: true }
-          );
-
-        // Ensure a baseline Free subscription exists for first-time users.
-        // This is safe to allow client-side because it cannot be used to self-upgrade.
-        await supabase
-          .from('subscriptions')
-          .upsert(
-            {
-              org_id: userId,
-              plan_id: 'free',
-              status: 'active',
-              stripe_customer_id: null,
-              stripe_subscription_id: null,
-              stripe_price_id: null,
-            },
-            { onConflict: 'org_id', ignoreDuplicates: true }
-          );
 
         const { data: sub, error } = await supabase
           .from('subscriptions')
@@ -226,6 +216,8 @@ const App: React.FC = () => {
         const planId = sub?.plan_id as PlanId | undefined;
         if (!cancelled && planId && planId in PLAN_CATALOG) {
           setServerPlanId(planId);
+        } else if (!cancelled) {
+          setServerPlanId('free');
         }
       } catch {
         // If billing tables aren't deployed yet, keep free.
