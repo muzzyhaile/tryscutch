@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { LogIn } from 'lucide-react';
+import { LogIn, Loader2 } from 'lucide-react';
 
 export const AuthView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -49,14 +49,16 @@ export const AuthView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white text-zinc-950 flex items-center justify-center p-6">
-      <div className="w-full max-w-xl">
-        <div className="border-2 border-zinc-100 rounded-[2.5rem] p-10 shadow-sm bg-white">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-zinc-950 rounded-2xl flex items-center justify-center text-white font-bold text-xl">S</div>
-            <div>
-              <h1 className="text-4xl font-bold tracking-tighter">Scutch</h1>
-              <p className="text-zinc-500 mt-1">Sign in with Google to access your workspace data.</p>
+    <div className="min-h-screen bg-zinc-50/50 text-zinc-950 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-lg">
+        <div className="border border-zinc-200/70 rounded-[2rem] p-6 sm:p-10 shadow-sm bg-white">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="w-12 h-12 bg-zinc-950 rounded-2xl flex items-center justify-center text-white font-extrabold text-xl shrink-0">S</div>
+            <div className="min-w-0">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tighter">Scutch</h1>
+              <p className="text-zinc-500 mt-1 text-sm sm:text-base leading-relaxed">
+                Sign in with Google to access your workspace data.
+              </p>
             </div>
           </div>
 
@@ -89,20 +91,31 @@ export const AuthView: React.FC = () => {
                 onChange={(e) => setHasAcceptedPrivacy(e.target.checked)}
               />
               <span className="text-xs text-zinc-600 leading-relaxed">
-                I agree to the <a className="underline underline-offset-4 hover:text-zinc-700 transition-colors" href="/terms">Terms</a> and
-                {' '}
-                <a className="underline underline-offset-4 hover:text-zinc-700 transition-colors" href="/privacy">Privacy Policy</a>.
+                I agree to the{' '}
+                <a className="underline underline-offset-4 hover:text-zinc-700 transition-colors" href="/terms">
+                  Terms
+                </a>{' '}
+                and{' '}
+                <a className="underline underline-offset-4 hover:text-zinc-700 transition-colors" href="/privacy">
+                  Privacy Policy
+                </a>.
               </span>
             </label>
 
             <button
               onClick={() => void signInWithGoogle()}
               disabled={isLoading || !hasAcceptedPrivacy}
-              className="w-full px-10 py-5 bg-zinc-950 text-white text-xl font-bold rounded-2xl hover:bg-zinc-800 transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-6 py-4 bg-zinc-950 text-white text-base sm:text-lg font-bold rounded-2xl hover:bg-zinc-800 transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <LogIn className="w-5 h-5" />
-              Continue with Google
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
+              {isLoading ? 'Connecting…' : 'Continue with Google'}
             </button>
+
+            {!hasAcceptedPrivacy && (
+              <div className="text-xs text-zinc-500">
+                Accept the Terms and Privacy Policy to continue.
+              </div>
+            )}
 
             <div className="text-xs text-zinc-500 leading-relaxed">
               This app uses Supabase Auth with Google OAuth. Your workspace data is private and secured with Row Level Security.

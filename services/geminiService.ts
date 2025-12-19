@@ -32,7 +32,8 @@ async function invokeGeminiFunction<T>(body: Record<string, unknown>): Promise<T
 
   if (error) {
     const status = (error as any)?.context?.status as number | undefined;
-    const parsedBody = tryParseJson((error as any)?.context?.body);
+    const rawBody = (error as any)?.context?.body as unknown;
+    const parsedBody = tryParseJson(rawBody);
     if (status === 402 && parsedBody?.code === 'quota_exceeded') {
       throw new QuotaExceededError(parsedBody?.message ?? 'Quota exceeded. Please upgrade your plan.');
     }
@@ -43,8 +44,14 @@ async function invokeGeminiFunction<T>(body: Record<string, unknown>): Promise<T
       (typeof parsedBody?.message === 'string' && parsedBody.message) ||
       null;
 
+    const rawBodyMessage = typeof rawBody === 'string' && rawBody.trim() ? rawBody.trim() : null;
+
     if (status && bodyMessage) {
       throw new Error(`Edge Function error (${status}): ${bodyMessage}`);
+    }
+
+    if (status && rawBodyMessage) {
+      throw new Error(`Edge Function error (${status}): ${rawBodyMessage}`);
     }
 
     if (status) {
