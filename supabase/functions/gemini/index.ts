@@ -11,7 +11,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 import { createClient, SupabaseClient, User } from "npm:@supabase/supabase-js@2";
-import { checkRateLimit, RATE_LIMITS, rateLimitHeaders } from "../_shared/ratelimit.ts";
+import { checkRateLimit, RATE_LIMITS, rateLimitHeaders } from "./ratelimit.ts";
 
 type GeminiAction =
   | "analyzeFeedbackBatch"
@@ -21,6 +21,18 @@ type GeminiAction =
   | "translateText";
 
 type JsonRecord = Record<string, unknown>;
+
+class ExternalApiError extends Error {
+  readonly status: number;
+  readonly details: unknown;
+
+  constructor(message: string, params: { status: number; details: unknown }) {
+    super(message);
+    this.name = 'ExternalApiError';
+    this.status = params.status;
+    this.details = params.details;
+  }
+}
 
 interface GeminiRequestBody {
   action?: GeminiAction;
@@ -250,8 +262,10 @@ async function geminiGenerateText(params: {
 
   const json = (await res.json().catch(() => null)) as any;
   if (!res.ok) {
-    const details = json ? JSON.stringify(json) : "(no response body)";
-    throw new Error(`Gemini API error (${res.status}): ${details}`);
+    throw new ExternalApiError('Gemini API request failed', {
+      status: res.status,
+      details: json ?? { message: '(no response body)' },
+    });
   }
 
   const text =
@@ -261,6 +275,15 @@ async function geminiGenerateText(params: {
     "";
 
   return text;
+}
+
+function isExternalApiError(error: unknown): error is ExternalApiError {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      (error as any).name === 'ExternalApiError' &&
+      typeof (error as any).status === 'number'
+  );
 }
 
 function mapClusterNamesToIds(params: {
@@ -623,6 +646,19 @@ Output Markdown with these sections:
 
     return jsonResponse(400, { error: `Unknown action: ${String(action)}` });
   } catch (e) {
+    if (isExternalApiError(e)) {
+      console.error('Edge Gemini external API error:', {
+        status: e.status,
+        details: e.details,
+      });
+      return jsonResponse(e.status, {
+        error: 'Gemini API error',
+        message: 'Gemini API error',
+        code: 'gemini_api_error',
+        details: e.details,
+      });
+    }
+
     console.error("Edge Gemini error:", e);
     return jsonResponse(500, { error: (e as Error)?.message ?? "Unknown error" });
   }
