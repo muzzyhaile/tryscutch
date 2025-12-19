@@ -157,14 +157,14 @@ async function ensurePersonalOrgAndMembership(params: { supabase: SupabaseClient
     );
   }
 
-  // Baseline subscription: every user starts on Starter (free tier).
+  // Baseline subscription: every user starts on Free.
   // Stripe/webhook upgrades will overwrite this row.
   const { error: subErr } = await supabase
     .from("subscriptions")
     .upsert(
       {
         org_id: userId,
-        plan_id: "starter",
+        plan_id: "free",
         status: "active",
         stripe_customer_id: null,
         stripe_subscription_id: null,
