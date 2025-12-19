@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { LogIn, Loader2 } from 'lucide-react';
+import { useNotification } from '../lib/notification';
 
 export const AuthView: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [hasAcceptedPrivacy, setHasAcceptedPrivacy] = useState(false);
+  const { notify } = useNotification();
 
   useEffect(() => {
     try {
@@ -43,7 +45,11 @@ export const AuthView: React.FC = () => {
       if (error) throw error;
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : 'Authentication failed.');
+      notify({
+        type: 'error',
+        title: 'Sign-in failed',
+        message: err instanceof Error ? err.message : 'Authentication failed. Please try again.',
+      });
       setIsLoading(false);
     }
   };

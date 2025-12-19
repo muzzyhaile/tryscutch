@@ -47,15 +47,21 @@ async function invokeGeminiFunction<T>(body: Record<string, unknown>): Promise<T
     const rawBodyMessage = typeof rawBody === 'string' && rawBody.trim() ? rawBody.trim() : null;
 
     if (status && bodyMessage) {
-      throw new Error(`Edge Function error (${status}): ${bodyMessage}`);
+      const err = new Error(bodyMessage);
+      (err as any).status = status;
+      throw err;
     }
 
     if (status && rawBodyMessage) {
-      throw new Error(`Edge Function error (${status}): ${rawBodyMessage}`);
+      const err = new Error(rawBodyMessage);
+      (err as any).status = status;
+      throw err;
     }
 
     if (status) {
-      throw new Error(`Edge Function error (${status}): ${error.message}`);
+      const err = new Error(error.message);
+      (err as any).status = status;
+      throw err;
     }
 
     throw new Error(error.message);
@@ -86,20 +92,15 @@ export const generateStrategicAdvice = async (
   feedbackItems: string[],
   context?: string
 ): Promise<string> => {
-  try {
-    const result = await invokeGeminiFunction<{ advice: string }>({
-      action: "generateStrategicAdvice",
-      model: DEFAULT_MODEL,
-      clusterName,
-      feedbackItems,
-      context,
-    });
+  const result = await invokeGeminiFunction<{ advice: string }>({
+    action: "generateStrategicAdvice",
+    model: DEFAULT_MODEL,
+    clusterName,
+    feedbackItems,
+    context,
+  });
 
-    return result.advice;
-  } catch (e) {
-    console.error("Strategy Gen Error", e);
-    return "Failed to generate strategic advice. Please try again.";
-  }
+  return result.advice;
 };
 
 export const generateProductRecommendations = async (
@@ -107,7 +108,6 @@ export const generateProductRecommendations = async (
   feedbackItems: string[],
   context?: string
 ): Promise<ProductRecommendation[]> => {
-  try {
   const result = await invokeGeminiFunction<{ recommendations: ProductRecommendation[] }>({
     action: "generateProductRecommendations",
     model: DEFAULT_MODEL,
@@ -116,10 +116,6 @@ export const generateProductRecommendations = async (
     context,
   });
   return result.recommendations;
-  } catch (e) {
-  console.error("Product Recommendations Error", e);
-  return [];
-  }
 };
 
 export const generateMarketResearch = async (
@@ -127,20 +123,15 @@ export const generateMarketResearch = async (
   query: string,
   context?: string
 ): Promise<string> => {
-  try {
-    const result = await invokeGeminiFunction<{ markdown: string }>({
-      action: "generateMarketResearch",
-      model: DEFAULT_MODEL,
-      category,
-      query,
-      context,
-    });
+  const result = await invokeGeminiFunction<{ markdown: string }>({
+    action: "generateMarketResearch",
+    model: DEFAULT_MODEL,
+    category,
+    query,
+    context,
+  });
 
-    return result.markdown;
-  } catch (e) {
-    console.error('Market Research Error', e);
-    return 'Failed to generate market research. Please try again.';
-  }
+  return result.markdown;
 };
 
 // Translate text to target language
@@ -148,17 +139,12 @@ export const translateText = async (
   text: string, 
   targetLanguage: string
 ): Promise<string> => {
-  try {
-    const result = await invokeGeminiFunction<{ translation: string }>({
-      action: "translateText",
-      model: DEFAULT_MODEL,
-      text,
-      targetLanguage,
-    });
+  const result = await invokeGeminiFunction<{ translation: string }>({
+    action: "translateText",
+    model: DEFAULT_MODEL,
+    text,
+    targetLanguage,
+  });
 
-    return result.translation || text;
-  } catch (e) {
-    console.error("Translation Error", e);
-    return text;
-  }
+  return result.translation || text;
 };

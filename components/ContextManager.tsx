@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ICP, ProductInfo, MarketFeedback, ProductPrinciple, ContextData, DEFAULT_PRODUCT_PRINCIPLES } from '../types';
 import { Plus, Edit2, Trash2, Users, Package, TrendingUp, X, Save, Compass, Check, Sparkles, Loader2 } from 'lucide-react';
 import { generateMarketResearch } from '../services/geminiService';
+import { useNotification } from '../lib/notification';
 
 interface ContextManagerProps {
   contextData: ContextData;
@@ -20,6 +21,7 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
   const [researchName, setResearchName] = useState('');
   const [researchQuery, setResearchQuery] = useState('');
   const [isResearchLoading, setIsResearchLoading] = useState(false);
+  const { notify } = useNotification();
   
   // ICP Form State
   const [icpForm, setIcpForm] = useState<Partial<ICP>>({});
@@ -56,7 +58,14 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
   }, [contextData.icps, contextData.productInfos]);
 
   const handleGenerateResearch = async () => {
-    if (!researchQuery.trim()) return;
+    if (!researchQuery.trim()) {
+      notify({
+        type: 'warning',
+        title: 'Missing request',
+        message: 'Add a short research question before generating.',
+      });
+      return;
+    }
     setIsResearchLoading(true);
     try {
       const content = await generateMarketResearch(researchCategory, researchQuery.trim(), contextSummary || undefined);
@@ -80,7 +89,11 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
       setResearchQuery('');
     } catch (e) {
       console.error(e);
-      alert('Failed to generate research. Please check your API key and try again.');
+      notify({
+        type: 'error',
+        title: 'Research failed',
+        message: e instanceof Error ? e.message : 'Failed to generate research. Please try again.',
+      });
     } finally {
       setIsResearchLoading(false);
     }

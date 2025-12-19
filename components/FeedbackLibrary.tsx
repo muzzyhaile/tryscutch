@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { FeedbackEntry, FeedbackSourceType } from '../types';
 import { Plus, Edit2, Trash2, MessageSquare, Share2, Headphones, StickyNote, X, Save, Upload, Trash } from 'lucide-react';
 import { importFile, ImportOptions, tableRowsToItems } from '../services/universalImport';
+import { useNotification } from '../lib/notification';
 
 interface FeedbackLibraryProps {
   entries: FeedbackEntry[];
@@ -19,6 +20,7 @@ const TAB_META: Record<ActiveTab, { label: string; icon: React.ReactNode }> = {
 };
 
 export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpdate, importOptions }) => {
+  const { notify } = useNotification();
   const [activeTab, setActiveTab] = useState<ActiveTab>('interview');
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -151,7 +153,11 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
       })();
 
       if (items.length === 0) {
-        alert('No rows could be imported from that file. If this is a CSV/XLSX table, make sure it has a column with the feedback text.');
+        notify({
+          type: 'warning',
+          title: 'No feedback found',
+          message: 'No rows could be imported. If this is a CSV/XLSX table, make sure it has a column with the feedback text.',
+        });
         return;
       }
 
@@ -171,7 +177,11 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
       onUpdate(entries.map(e => (e.id === entry.id ? updated : e)));
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to import file.');
+      notify({
+        type: 'error',
+        title: 'Import failed',
+        message: err instanceof Error ? err.message : 'Failed to import file.',
+      });
     }
   };
 
@@ -254,14 +264,22 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
       })();
 
       if (newEntries.length === 0) {
-        alert('No rows could be imported from that file. If this is a CSV/XLSX table, make sure it has a column with the feedback text.');
+        notify({
+          type: 'warning',
+          title: 'No feedback found',
+          message: 'No rows could be imported. If this is a CSV/XLSX table, make sure it has a column with the feedback text.',
+        });
         return;
       }
 
       onUpdate([...newEntries, ...entries]);
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : 'Failed to import file.');
+      notify({
+        type: 'error',
+        title: 'Import failed',
+        message: err instanceof Error ? err.message : 'Failed to import file.',
+      });
     }
   };
 
@@ -355,7 +373,11 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
             const files = e.dataTransfer.files;
             if (!files || files.length === 0) return;
             if (files.length > 1) {
-              alert('Please upload one file at a time.');
+              notify({
+                type: 'warning',
+                title: 'One file at a time',
+                message: 'Please upload one file at a time.',
+              });
               return;
             }
             const file = files[0];

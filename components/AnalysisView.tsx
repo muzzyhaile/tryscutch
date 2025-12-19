@@ -7,6 +7,7 @@ import jsPDF from 'jspdf';
 import { generateStrategicAdvice, generateProductRecommendations, translateText } from '../services/geminiService';
 import { SupportedLanguage, SUPPORTED_LANGUAGES } from '../types-languages';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { useNotification } from '../lib/notification';
 
 interface AnalysisViewProps {
   project: Project;
@@ -18,6 +19,7 @@ interface AnalysisViewProps {
 
 export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdateProject, isPrintView = false, selectedLanguage = 'en', onLanguageChange }) => {
   const result = project.analysis;
+  const { notify } = useNotification();
   const [selectedCluster, setSelectedCluster] = useState<Cluster | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false);
@@ -191,7 +193,11 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
       pdf.save(`${project.name.replace(/\s+/g, "_")}_report.pdf`);
     } catch (error) {
       console.error("PDF Export failed", error);
-      alert("Could not generate PDF. Please try again.");
+      notify({
+        type: 'error',
+        title: 'Export failed',
+        message: 'Could not generate the PDF. Please try again.',
+      });
     } finally {
       setIsExporting(false);
     }
@@ -267,6 +273,11 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
         setSelectedCluster({ ...selectedCluster, strategicAdvice: advice });
     } catch (e) {
         console.error(e);
+        notify({
+          type: 'error',
+          title: 'Advice failed',
+          message: e instanceof Error ? e.message : 'Could not generate strategic advice. Please try again.',
+        });
     } finally {
         setIsGeneratingAdvice(false);
     }
@@ -308,7 +319,11 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
       setCurrentLanguage(selectedLanguage);
     } catch (e) {
       console.error('Translation failed:', e);
-      alert('Translation failed. Please try again.');
+      notify({
+        type: 'error',
+        title: 'Translation failed',
+        message: e instanceof Error ? e.message : 'Translation failed. Please try again.',
+      });
     } finally {
       setIsTranslating(false);
     }
@@ -345,6 +360,11 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
         onUpdateProject(updatedProject);
     } catch (e) {
         console.error(e);
+        notify({
+          type: 'error',
+          title: 'Recommendations failed',
+          message: e instanceof Error ? e.message : 'Could not generate recommendations. Please try again.',
+        });
     } finally {
         setIsGeneratingRecommendations(false);
     }

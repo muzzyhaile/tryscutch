@@ -7,6 +7,7 @@ import {
   PlanId,
 } from '../lib/plans';
 import { supabase } from '../lib/supabaseClient';
+import { useNotification } from '../lib/notification';
 
 type BillingViewProps = {
   userId?: string;
@@ -19,6 +20,7 @@ type ServerSubscription = {
     cancel_at_period_end: boolean | null;
     current_period_end: string | null;
     stripe_customer_id: string | null;
+    stripe_subscription_id: string | null;
 };
 
 type ServerUsage = {
@@ -44,6 +46,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
     const [serverUsage, setServerUsage] = useState<ServerUsage | null>(null);
     const [isStartingCheckout, setIsStartingCheckout] = useState<PlanId | null>(null);
     const [isStartingPortal, setIsStartingPortal] = useState(false);
+    const { notify } = useNotification();
 
     const monthStart = useMemo(() => {
         const now = new Date();
@@ -92,7 +95,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
 
                 const { data: sub, error: subErr } = await supabase
                     .from('subscriptions')
-                    .select('plan_id,status,cancel_at_period_end,current_period_end,stripe_customer_id')
+                    .select('plan_id,status,cancel_at_period_end,current_period_end,stripe_customer_id,stripe_subscription_id')
                     .eq('org_id', userId)
                     .maybeSingle();
                 if (subErr) throw subErr;
@@ -123,7 +126,18 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
     }, [userId, monthStart]);
 
     const planIdFromServer = (serverSub?.plan_id ?? 'free') as PlanId;
-    const currentPlan = useMemo(() => PLAN_CATALOG[planIdFromServer], [planIdFromServer]);
+    const effectivePlanId = useMemo<PlanId>(() => {
+        if (!serverSub) return 'free';
+
+        // Defensive: if there's no Stripe linkage, treat as Free.
+        // Paid subscriptions should be created/updated by Stripe webhook.
+        const hasStripeLink = Boolean(serverSub.stripe_customer_id) || Boolean(serverSub.stripe_subscription_id);
+        if (!hasStripeLink && serverSub.plan_id !== 'free') return 'free';
+
+        return planIdFromServer;
+    }, [serverSub, planIdFromServer]);
+
+    const currentPlan = useMemo(() => PLAN_CATALOG[effectivePlanId], [effectivePlanId]);
 
     const statusLabel = (serverSub?.status ?? 'not subscribed').toString().replace(/_/g, ' ');
 
@@ -150,11 +164,12 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
   const seatsIncluded = currentPlan.limits.seatsIncluded;
     const seats = seatsIncluded;
 
-    const canManageBilling = Boolean(serverSub?.stripe_customer_id) && planIdFromServer !== 'free';
+    const canManageBilling =
+        (Boolean(serverSub?.stripe_customer_id) || Boolean(serverSub?.stripe_subscription_id)) && effectivePlanId !== 'free';
 
     const startCheckout = async (targetPlanId: PlanId) => {
         if (!userId) return;
-        if (targetPlanId === planIdFromServer) return;
+        if (targetPlanId === effectivePlanId) return;
         if (targetPlanId === 'free') return;
         if (targetPlanId === 'enterprise') {
             window.location.href = 'mailto:admin@guidingventures.com?subject=Scutch%20Enterprise%20Plan';
@@ -176,7 +191,11 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
             if (!url) throw new Error('Missing checkout url');
             window.location.href = url;
         } catch (e) {
-            alert((e as Error)?.message ?? 'Failed to start checkout');
+            notify({
+                type: 'error',
+                title: 'Checkout failed',
+                message: e instanceof Error ? e.message : 'Failed to start checkout. Please try again.',
+            });
         } finally {
             setIsStartingCheckout(null);
         }
@@ -195,7 +214,11 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
             if (!url) throw new Error('Missing portal url');
             window.location.href = url;
         } catch (e) {
-            alert((e as Error)?.message ?? 'Failed to open billing portal');
+            notify({
+                type: 'error',
+                title: 'Billing portal failed',
+                message: e instanceof Error ? e.message : 'Failed to open billing portal. Please try again.',
+            });
         } finally {
             setIsStartingPortal(false);
         }
@@ -305,7 +328,11 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                             type="button"
                             onClick={() => {
                                 if (currentPlan.id !== 'enterprise') {
-                                    alert('Seat management is available on Enterprise.');
+                                    notify({
+                                        type: 'info',
+                                        title: 'Enterprise only',
+                                        message: 'Seat management is available on the Enterprise plan.',
+                                    });
                                     return;
                                 }
                                 window.location.href = 'mailto:admin@guidingventures.com?subject=Scutch%20Enterprise%20Seat%20Management';
