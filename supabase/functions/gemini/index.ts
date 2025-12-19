@@ -81,6 +81,32 @@ function stripCodeFences(text: string): string {
   return trimmed;
 }
 
+function extractJsonObjectCandidate(text: string): string | null {
+  const raw = (text ?? "").trim();
+  if (!raw) return null;
+
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) return null;
+  return raw.slice(start, end + 1);
+}
+
+function parseJsonLenient(text: string): unknown {
+  const cleaned = stripCodeFences(text);
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const candidate = extractJsonObjectCandidate(cleaned);
+    if (!candidate) throw new Error("invalid_model_json");
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      throw new Error("invalid_model_json");
+    }
+  }
+}
+
 async function requireUser(req: Request): Promise<User | null> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
@@ -445,8 +471,21 @@ Return ONLY valid JSON with this shape:
         parts: [prompt, `FEEDBACK DATA LIST:\n${feedbackText}`],
       });
 
-      const jsonText = stripCodeFences(text);
-      const data = JSON.parse(jsonText);
+      let data: any;
+      try {
+        data = parseJsonLenient(text);
+      } catch (e) {
+        console.error("Gemini returned invalid JSON for analyzeFeedbackBatch", {
+          model,
+          textLength: typeof text === "string" ? text.length : 0,
+          error: (e as Error)?.message ?? String(e),
+        });
+        return jsonResponse(502, {
+          error: "AI provider returned invalid JSON. Please retry.",
+          message: "AI provider returned invalid JSON. Please retry.",
+          code: "invalid_model_response",
+        });
+      }
 
       const clusters = (data.clusters ?? []).map((c: any, index: number) => ({
         id: `cluster-${index}-${Date.now()}`,
@@ -543,8 +582,22 @@ Return ONLY valid JSON with this shape:
 `;
 
       const text = await geminiGenerateText({ apiKey, model, parts: [prompt] });
-      const jsonText = stripCodeFences(text);
-      const data = JSON.parse(jsonText);
+
+      let data: any;
+      try {
+        data = parseJsonLenient(text);
+      } catch (e) {
+        console.error("Gemini returned invalid JSON for generateProductRecommendations", {
+          model,
+          textLength: typeof text === "string" ? text.length : 0,
+          error: (e as Error)?.message ?? String(e),
+        });
+        return jsonResponse(502, {
+          error: "AI provider returned invalid JSON. Please retry.",
+          message: "AI provider returned invalid JSON. Please retry.",
+          code: "invalid_model_response",
+        });
+      }
 
       const recommendations = (data.recommendations ?? []).map(
         (rec: any, index: number) => ({

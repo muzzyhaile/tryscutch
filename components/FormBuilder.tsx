@@ -440,28 +440,32 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({ forms, onUpdate, publi
 
                     {form.isActive && (
                       <div className="pt-4 border-t border-zinc-100">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                           <input
                             type="text"
                             value={shareLink}
                             readOnly
-                            className="flex-1 px-3 py-2 rounded-lg border border-zinc-200 bg-zinc-50 text-sm font-mono text-zinc-600"
+                            className="w-full sm:flex-1 min-w-0 px-3 py-2 rounded-lg border border-zinc-200 bg-zinc-50 text-sm font-mono text-zinc-600"
                           />
-                          <button
-                            onClick={() => copyToClipboard(shareLink)}
-                            className="flex items-center gap-2 px-4 py-2 bg-zinc-950 text-white rounded-lg font-bold hover:bg-zinc-800 transition-all text-sm"
-                          >
-                            {copiedLink === shareLink ? <Check size={16} /> : <Copy size={16} />}
-                            {copiedLink === shareLink ? 'Copied!' : 'Copy Link'}
-                          </button>
-                          <a
-                            href={shareLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-2 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-zinc-700 transition-all"
-                          >
-                            <ExternalLink size={18} />
-                          </a>
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <button
+                              onClick={() => copyToClipboard(shareLink)}
+                              className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-4 py-2 bg-zinc-950 text-white rounded-lg font-bold hover:bg-zinc-800 transition-all text-sm"
+                            >
+                              {copiedLink === shareLink ? <Check size={16} /> : <Copy size={16} />}
+                              {copiedLink === shareLink ? 'Copied!' : 'Copy Link'}
+                            </button>
+                            <a
+                              href={shareLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 bg-zinc-100 hover:bg-zinc-200 rounded-lg text-zinc-700 transition-all"
+                              aria-label="Open share link"
+                              title="Open"
+                            >
+                              <ExternalLink size={18} />
+                            </a>
+                          </div>
                         </div>
                       </div>
                     )}

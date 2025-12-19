@@ -469,10 +469,10 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
       <div className="space-y-10 bg-white">
         
         {/* 1. Executive Summary (Full Width) */}
-        <div id="report-summary" className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-zinc-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <h3 className="text-3xl font-bold text-zinc-950 mb-8 tracking-tight">Executive Summary</h3>
+        <div id="report-summary" className="bg-white p-5 sm:p-8 md:p-12 rounded-[2.5rem] border border-zinc-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <h3 className="text-2xl sm:text-3xl font-bold text-zinc-950 mb-6 sm:mb-8 tracking-tight">Executive Summary</h3>
             
-            <div className="flex flex-wrap gap-3 mb-10">
+            <div className="flex flex-wrap gap-3 mb-8 sm:mb-10">
                 <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest py-2">Dominant Signals:</span>
                 {sortedClusters.slice(0, 3).map((c, i) => (
                     <span key={c.id} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-zinc-50 border border-zinc-200 text-zinc-700 text-sm font-bold">
@@ -482,14 +482,14 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                 ))}
             </div>
 
-            <div className="prose prose-xl prose-zinc max-w-none">
+            <div className="prose sm:prose-xl prose-zinc max-w-none">
                 {isTranslating ? (
                     <div className="flex items-center gap-3 text-zinc-400">
                         <Loader2 className="animate-spin" size={24} />
                         <span>Translating...</span>
                     </div>
                 ) : (
-                    <p className="text-zinc-600 text-2xl leading-relaxed font-light">
+                <p className="text-zinc-600 text-lg sm:text-xl md:text-2xl leading-relaxed font-light">
                         {translatedContent['summary'] || result.summary}
                     </p>
                 )}
@@ -497,20 +497,20 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
         </div>
 
         {/* 2. Action Items (Full Width, Black) */}
-        <div id="report-actions" className="bg-zinc-950 p-8 md:p-12 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-12 opacity-5">
+        <div id="report-actions" className="bg-zinc-950 p-5 sm:p-8 md:p-12 rounded-[2.5rem] shadow-2xl text-white relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-6 sm:p-12 opacity-5">
                 <Zap size={200} />
             </div>
             <div className="relative z-10">
-                <h3 className="text-zinc-300 font-bold text-sm uppercase tracking-widest mb-10">Strategic Priorities</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+            <h3 className="text-zinc-300 font-bold text-sm uppercase tracking-widest mb-6 sm:mb-10">Strategic Priorities</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 md:gap-x-12 gap-y-6 sm:gap-y-10">
                     {result.topPriorities.slice(0, 4).map((item, i) => (
-                        <div key={i} className="flex gap-6 group/item">
-                            <div className="mt-1 min-w-[3rem] h-12 rounded-2xl bg-white flex items-center justify-center text-xl font-bold shrink-0 text-zinc-950 shadow-lg">
+                <div key={i} className="flex gap-4 sm:gap-6 group/item">
+                  <div className="mt-1 min-w-[2.5rem] sm:min-w-[3rem] h-10 sm:h-12 rounded-2xl bg-white flex items-center justify-center text-lg sm:text-xl font-bold shrink-0 text-zinc-950 shadow-lg">
                                 {i + 1}
                             </div>
                             <div className="flex-1 space-y-2">
-                                <span className="text-xl font-medium leading-relaxed block text-zinc-100">
+                    <span className="text-lg sm:text-xl font-medium leading-relaxed block text-zinc-100">
                                     {translatedContent[`priority-${i}`] || item}
                                 </span>
                                 {!isPrintView && (
@@ -528,35 +528,35 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
 
         {/* 3. High Impact Stats (Huge) */}
         <div id="report-stats" className="grid grid-cols-2 md:grid-cols-4 gap-6">
-             <div className="bg-zinc-50 p-8 rounded-[2rem] border border-zinc-100">
-                <div className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Sentiment Score</div>
-                <div className={`text-6xl font-bold tracking-tighter ${result.overallSentiment > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+           <div className="bg-zinc-50 p-5 sm:p-8 rounded-[2rem] border border-zinc-100">
+            <div className="text-[11px] sm:text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Sentiment Score</div>
+            <div className={`text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter ${result.overallSentiment > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {(result.overallSentiment * 100).toFixed(0)}%
                 </div>
             </div>
-            <div className="bg-zinc-50 p-8 rounded-[2rem] border border-zinc-100">
-                <div className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Total Feedback</div>
-                <div className="text-6xl font-bold tracking-tighter text-zinc-950">{totalItems}</div>
+          <div className="bg-zinc-50 p-5 sm:p-8 rounded-[2rem] border border-zinc-100">
+            <div className="text-[11px] sm:text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Total Feedback</div>
+            <div className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter text-zinc-950">{totalItems}</div>
             </div>
-            <div className="bg-zinc-50 p-8 rounded-[2rem] border border-zinc-100">
-                <div className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Themes Detected</div>
-                <div className="text-6xl font-bold tracking-tighter text-zinc-950">{result.clusters.length}</div>
+          <div className="bg-zinc-50 p-5 sm:p-8 rounded-[2rem] border border-zinc-100">
+            <div className="text-[11px] sm:text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Themes Detected</div>
+            <div className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter text-zinc-950">{result.clusters.length}</div>
             </div>
-            <div className="bg-zinc-50 p-8 rounded-[2rem] border border-zinc-100">
-                <div className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Urgency</div>
-                <div className={`text-6xl font-bold tracking-tighter ${impactColorClass}`}>{impactLabel}</div>
+          <div className="bg-zinc-50 p-5 sm:p-8 rounded-[2rem] border border-zinc-100">
+            <div className="text-[11px] sm:text-sm font-bold text-zinc-400 uppercase tracking-widest mb-2">Urgency</div>
+            <div className={`text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter ${impactColorClass}`}>{impactLabel}</div>
             </div>
         </div>
 
         {/* 4. Chart */}
-        <div id="report-chart" className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-zinc-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] break-inside-avoid">
-            <h3 className="text-2xl font-bold text-zinc-950 tracking-tight mb-10">Theme Distribution</h3>
-            <div className="h-[600px] w-full">
+        <div id="report-chart" className="bg-white p-5 sm:p-8 md:p-12 rounded-[2.5rem] border border-zinc-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] break-inside-avoid">
+          <h3 className="text-xl sm:text-2xl font-bold text-zinc-950 tracking-tight mb-6 sm:mb-10">Theme Distribution</h3>
+          <div className="h-[420px] sm:h-[520px] md:h-[600px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart 
                         data={sortedClusters} 
                         layout="vertical" 
-                        margin={{ top: 0, right: 30, left: 30, bottom: 0 }}
+                margin={{ top: 0, right: isPrintView ? 30 : 16, left: isPrintView ? 30 : 8, bottom: 0 }}
                     >
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f4f4f5" />
                         <XAxis type="number" hide />
@@ -565,8 +565,8 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                             type="category" 
                             axisLine={false} 
                             tickLine={false} 
-                            width={240}
-                            tick={{ fill: '#18181b', fontSize: 16, fontWeight: 700 }}
+                          width={isPrintView ? 240 : 160}
+                          tick={{ fill: '#18181b', fontSize: isPrintView ? 16 : 12, fontWeight: 700 }}
                         />
                         <Tooltip 
                             cursor={{ fill: '#f4f4f5' }}
@@ -583,7 +583,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                         <Bar 
                             dataKey="itemCount" 
                             radius={[0, 12, 12, 0]} 
-                            barSize={48}
+                          barSize={isPrintView ? 48 : 32}
                             onClick={(data) => !isPrintView && setSelectedCluster(data)}
                             className={!isPrintView ? "cursor-pointer" : ""}
                         >
@@ -602,22 +602,22 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
 
         {/* 5. Product Recommendations Section */}
         {!isPrintView && (
-          <div id="product-recommendations" className="bg-white p-8 md:p-12 rounded-[2.5rem] border border-zinc-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <div className="flex items-start justify-between mb-8">
+          <div id="product-recommendations" className="bg-white p-5 sm:p-8 md:p-12 rounded-[2.5rem] border border-zinc-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-zinc-950 rounded-xl">
                     <Lightbulb size={24} className="text-white" />
                   </div>
-                  <h3 className="text-3xl font-bold text-zinc-950 tracking-tight">Product Recommendations</h3>
+                  <h3 className="text-2xl sm:text-3xl font-bold text-zinc-950 tracking-tight">Product Recommendations</h3>
                 </div>
-                <p className="text-zinc-500 text-lg">AI-powered actionable improvements based on customer feedback</p>
+                <p className="text-zinc-500 text-base sm:text-lg">AI-powered actionable improvements based on customer feedback</p>
               </div>
               
               <button 
                 onClick={handleGenerateRecommendations}
                 disabled={isGeneratingRecommendations}
-                className="px-6 py-3 bg-zinc-950 text-white rounded-xl font-bold hover:bg-zinc-800 transition-all flex items-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50"
+                className="w-full sm:w-auto justify-center px-4 sm:px-6 py-3 bg-zinc-950 text-white rounded-xl font-bold hover:bg-zinc-800 transition-all flex items-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50"
               >
                 {isGeneratingRecommendations ? (
                   <>
@@ -695,7 +695,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
 
         {/* 6. Deep Dive Grid */}
         <div className="space-y-8">
-            <h3 id="report-deep-dive-title" className="text-4xl font-bold text-zinc-950 tracking-tighter">Deep Dive Analysis</h3>
+          <h3 id="report-deep-dive-title" className="text-2xl sm:text-4xl font-bold text-zinc-950 tracking-tighter">Deep Dive Analysis</h3>
             
             {/* The ID 'report-cluster-grid' allows us to iterate through children for PDF export */}
             <div id="report-cluster-grid" className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -703,13 +703,13 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                     <div 
                         key={cluster.id} 
                         onClick={() => !isPrintView && setSelectedCluster(cluster)}
-                        className={`group bg-white rounded-[2rem] border border-zinc-100 p-8 hover:shadow-xl transition-all duration-300 relative overflow-hidden break-inside-avoid ${!isPrintView ? 'cursor-pointer' : ''}`}
+                      className={`group bg-white rounded-[2rem] border border-zinc-100 p-5 sm:p-8 hover:shadow-xl transition-all duration-300 relative overflow-hidden break-inside-avoid ${!isPrintView ? 'cursor-pointer' : ''}`}
                     >
                         <div className="absolute top-0 left-0 w-1.5 h-full bg-transparent group-hover:bg-indigo-500 transition-colors"></div>
                         
                         <div className="flex justify-between items-start mb-4 pl-4">
                             <div className="space-y-1">
-                                <h4 className="font-bold text-zinc-950 text-2xl tracking-tight">{translatedContent[`cluster-name-${cluster.id}`] || cluster.name}</h4>
+                            <h4 className="font-bold text-zinc-950 text-xl sm:text-2xl tracking-tight">{translatedContent[`cluster-name-${cluster.id}`] || cluster.name}</h4>
                                 {cluster.isEmerging && (
                                     <div className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full border border-indigo-100 uppercase tracking-wider">
                                         <TrendingUp size={12} /> Emerging Theme
@@ -721,7 +721,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                             </div>
                         </div>
                         
-                        <p className="text-zinc-500 text-lg mb-6 pl-4 leading-relaxed font-medium">
+                        <p className="text-zinc-500 text-base sm:text-lg mb-6 pl-4 leading-relaxed font-medium">
                             {translatedContent[`cluster-desc-${cluster.id}`] || cluster.description}
                         </p>
 
@@ -758,17 +758,17 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                 onClick={() => setSelectedCluster(null)}
             />
             <div className="fixed inset-y-0 right-0 w-full md:w-[800px] bg-white z-50 shadow-2xl transform transition-transform animate-in slide-in-from-right duration-300 flex flex-col no-print">
-                <div className="p-8 border-b border-zinc-100 flex items-start justify-between bg-white shrink-0">
+              <div className="p-4 sm:p-6 md:p-8 border-b border-zinc-100 flex items-start justify-between bg-white shrink-0">
                     <div className="space-y-2">
                         <div className="flex items-center gap-4">
-                            <h2 className="text-3xl md:text-4xl font-bold text-zinc-950 tracking-tight">{translatedContent[`cluster-name-${selectedCluster.id}`] || selectedCluster.name}</h2>
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-zinc-950 tracking-tight">{translatedContent[`cluster-name-${selectedCluster.id}`] || selectedCluster.name}</h2>
                              {selectedCluster.isEmerging && (
                                 <span className="flex items-center gap-1 text-xs font-bold px-3 py-1 bg-indigo-600 text-white rounded-full">
                                     <TrendingUp size={12} /> Emerging
                                 </span>
                             )}
                         </div>
-                        <p className="text-zinc-500 text-lg">{translatedContent[`cluster-desc-${selectedCluster.id}`] || selectedCluster.description}</p>
+                  <p className="text-zinc-500 text-base sm:text-lg">{translatedContent[`cluster-desc-${selectedCluster.id}`] || selectedCluster.description}</p>
                     </div>
                     <button 
                         onClick={() => setSelectedCluster(null)}
@@ -778,7 +778,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 space-y-12">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-12">
                     {/* Stats & Controls */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Priority with Slider */}

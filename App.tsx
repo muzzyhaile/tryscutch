@@ -758,17 +758,17 @@ const App: React.FC = () => {
     // Default: List View
     return (
       <div className="space-y-10 animate-in fade-in duration-500 max-w-7xl mx-auto">
-        <div className="flex items-end justify-between border-b border-zinc-100 pb-8">
-            <div>
-                 <h1 className="text-5xl font-bold tracking-tighter text-zinc-950">Projects</h1>
-                 <p className="text-xl text-zinc-500 mt-2 font-light">Manage and review your feedback analysis.</p>
-            </div>
-            <button 
-                onClick={() => setView(VIEW_STATES.NEW)}
-                className="bg-zinc-950 text-white px-6 py-3 rounded-xl text-base font-bold hover:bg-zinc-800 transition-colors flex items-center gap-2 shadow-lg hover:scale-105 transform duration-200"
-            >
-                <Plus size={20} /> New Project
-            </button>
+        <div className="flex flex-col gap-4 border-b border-zinc-100 pb-8 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-4xl font-bold tracking-tighter text-zinc-950 sm:text-5xl">Projects</h1>
+            <p className="mt-2 text-base font-light text-zinc-500 sm:text-xl">Manage and review your feedback analysis.</p>
+          </div>
+          <button
+            onClick={() => setView(VIEW_STATES.NEW)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-950 px-6 py-3 text-base font-bold text-white shadow-lg transition-colors duration-200 transform hover:bg-zinc-800 hover:scale-105 sm:w-auto"
+          >
+            <Plus size={20} /> New Project
+          </button>
         </div>
 
         {projects.length === 0 ? (

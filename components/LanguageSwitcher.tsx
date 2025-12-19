@@ -32,7 +32,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
             className="fixed inset-0 z-40" 
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl border border-zinc-200 shadow-xl z-50 py-2">
+          <div className="fixed left-4 right-4 top-24 bg-white rounded-xl border border-zinc-200 shadow-xl z-50 py-2 max-h-[calc(100vh-8rem)] overflow-auto md:absolute md:left-auto md:right-0 md:top-auto md:mt-2 md:w-64">
             <div className="px-4 py-2 border-b border-zinc-100">
               <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Select Language</p>
             </div>

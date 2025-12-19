@@ -98,11 +98,11 @@ export const SampleReportPage: React.FC<SampleReportPageProps> = ({ onBack, onSt
 
   return (
     <div className="space-y-10">
-      <div className="rounded-[2rem] border border-zinc-200 bg-white p-7 md:p-10">
+      <div className="rounded-[2rem] border border-zinc-200 bg-white p-5 sm:p-7 md:p-10">
         <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <div className="text-xs font-bold tracking-widest uppercase text-zinc-500">{report.subtitle}</div>
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-zinc-950">{report.title}</h1>
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight text-zinc-950">{report.title}</h1>
             <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-600">
               <span className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-bold text-zinc-700">
                 {report.dateLabel}
@@ -171,7 +171,7 @@ export const SampleReportPage: React.FC<SampleReportPageProps> = ({ onBack, onSt
         </div>
       </div>
 
-      <div className="rounded-[2rem] border border-zinc-200 bg-white p-7 md:p-10">
+      <div className="rounded-[2rem] border border-zinc-200 bg-white p-5 sm:p-7 md:p-10">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <div className="text-xs font-bold tracking-widest uppercase text-zinc-500">Theme overview</div>
@@ -229,7 +229,7 @@ export const SampleReportPage: React.FC<SampleReportPageProps> = ({ onBack, onSt
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-7 rounded-[2rem] border border-zinc-200 bg-white p-7 md:p-10">
+        <div className="lg:col-span-7 rounded-[2rem] border border-zinc-200 bg-white p-5 sm:p-7 md:p-10">
           <div className="text-xs font-bold tracking-widest uppercase text-zinc-500">Verbatims</div>
           <h2 className="mt-2 text-2xl md:text-3xl font-bold tracking-tight text-zinc-950">Representative quotes</h2>
           <p className="mt-2 text-sm text-zinc-600 leading-relaxed">
@@ -258,7 +258,7 @@ export const SampleReportPage: React.FC<SampleReportPageProps> = ({ onBack, onSt
           </div>
         </div>
 
-        <div className="lg:col-span-5 rounded-[2rem] border border-zinc-200 bg-white p-7 md:p-10">
+        <div className="lg:col-span-5 rounded-[2rem] border border-zinc-200 bg-white p-5 sm:p-7 md:p-10">
           <div className="text-xs font-bold tracking-widest uppercase text-zinc-500">Recommended actions</div>
           <h2 className="mt-2 text-2xl md:text-3xl font-bold tracking-tight text-zinc-950">What to do next</h2>
           <p className="mt-2 text-sm text-zinc-600 leading-relaxed">

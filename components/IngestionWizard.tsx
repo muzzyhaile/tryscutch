@@ -170,7 +170,7 @@ export const IngestionWizard: React.FC<IngestionWizardProps> = ({ onAnalyze, isL
   return (
     <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <div className="space-y-4">
-        <h1 className="text-5xl md:text-6xl font-bold tracking-tighter text-zinc-950">New Analysis</h1>
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter text-zinc-950">New Analysis</h1>
         <p className="text-xl md:text-2xl text-zinc-500 font-light max-w-2xl">Import your customer feedback to uncover hidden insights, emerging trends, and actionable priorities.</p>
       </div>
 

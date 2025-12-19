@@ -199,7 +199,7 @@ export const Layout: React.FC<LayoutProps> = ({
             {isMobileNavOpen && (
               <div
                 role="menu"
-                className="absolute left-4 right-4 top-[5.25rem] rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-200 overflow-hidden"
+                className="absolute left-4 right-4 top-[5.25rem] rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-200 overflow-hidden max-h-[calc(100vh-7rem)] overflow-y-auto"
               >
                 <button
                   type="button"
@@ -338,7 +338,7 @@ export const Layout: React.FC<LayoutProps> = ({
             {isUserMenuOpen && (
               <div
                 role="menu"
-                className="absolute right-4 sm:right-6 md:right-12 top-[5.25rem] w-[min(16rem,calc(100vw-2rem))] rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-200 overflow-hidden"
+                className="absolute right-4 sm:right-6 md:right-12 top-[5.25rem] w-[min(16rem,calc(100vw-2rem))] rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-200 overflow-hidden max-h-[calc(100vh-7rem)] overflow-y-auto"
               >
                 <button
                   type="button"

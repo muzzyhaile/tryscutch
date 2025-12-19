@@ -257,10 +257,10 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-zinc-200">
+      <div className="-mx-4 px-4 sm:mx-0 sm:px-0 flex gap-2 overflow-x-auto border-b border-zinc-200">
         <button
           onClick={() => { setActiveTab('icp'); resetForms(); }}
-          className={`flex items-center gap-2 px-6 py-3 font-bold transition-all ${
+          className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 sm:px-6 py-3 font-bold transition-all ${
             activeTab === 'icp'
               ? 'border-b-2 border-zinc-950 text-zinc-950'
               : 'text-zinc-400 hover:text-zinc-600'
@@ -271,7 +271,7 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
         </button>
         <button
           onClick={() => { setActiveTab('product'); resetForms(); }}
-          className={`flex items-center gap-2 px-6 py-3 font-bold transition-all ${
+          className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 sm:px-6 py-3 font-bold transition-all ${
             activeTab === 'product'
               ? 'border-b-2 border-zinc-950 text-zinc-950'
               : 'text-zinc-400 hover:text-zinc-600'
@@ -282,7 +282,7 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
         </button>
         <button
           onClick={() => { setActiveTab('market'); resetForms(); }}
-          className={`flex items-center gap-2 px-6 py-3 font-bold transition-all ${
+          className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 sm:px-6 py-3 font-bold transition-all ${
             activeTab === 'market'
               ? 'border-b-2 border-zinc-950 text-zinc-950'
               : 'text-zinc-400 hover:text-zinc-600'
@@ -293,7 +293,7 @@ export const ContextManager: React.FC<ContextManagerProps> = ({ contextData, onU
         </button>
         <button
           onClick={() => { setActiveTab('principles'); resetForms(); }}
-          className={`flex items-center gap-2 px-6 py-3 font-bold transition-all ${
+          className={`shrink-0 whitespace-nowrap flex items-center gap-2 px-4 sm:px-6 py-3 font-bold transition-all ${
             activeTab === 'principles'
               ? 'border-b-2 border-zinc-950 text-zinc-950'
               : 'text-zinc-400 hover:text-zinc-600'

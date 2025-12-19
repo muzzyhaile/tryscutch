@@ -316,18 +316,18 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
 
   return (
     <div className="space-y-10 animate-in fade-in duration-500">
-      <div className="flex items-end justify-between border-b border-zinc-100 pb-8">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-zinc-100 pb-6 sm:pb-8">
         <div>
-          <h1 className="text-5xl font-bold tracking-tighter text-zinc-950">Feedback Library</h1>
-          <p className="text-xl text-zinc-500 mt-2 font-light max-w-2xl">
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tighter text-zinc-950">Feedback Library</h1>
+          <p className="text-base sm:text-xl text-zinc-500 mt-2 font-light max-w-2xl">
             Keep interviews, social feedback, support notes, and research in one place.
           </p>
         </div>
         {!isEditing && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full md:w-auto">
             <button
               onClick={() => sectionUploadRef.current?.click()}
-              className="bg-white text-zinc-950 px-6 py-3 rounded-xl text-base font-bold hover:bg-zinc-50 transition-colors flex items-center gap-2 border border-zinc-200"
+              className="w-full sm:w-auto justify-center bg-white text-zinc-950 px-6 py-3 rounded-xl text-base font-bold hover:bg-zinc-50 transition-colors flex items-center gap-2 border border-zinc-200"
               title={`Upload multiple rows into ${TAB_META[activeTab].label}`}
             >
               <Upload size={20} /> Upload
@@ -338,7 +338,7 @@ export const FeedbackLibrary: React.FC<FeedbackLibraryProps> = ({ entries, onUpd
                 setEditingId(null);
                 setForm({ title: '', content: '' });
               }}
-              className="bg-zinc-950 text-white px-6 py-3 rounded-xl text-base font-bold hover:bg-zinc-800 transition-colors flex items-center gap-2 shadow-lg"
+              className="w-full sm:w-auto justify-center bg-zinc-950 text-white px-6 py-3 rounded-xl text-base font-bold hover:bg-zinc-800 transition-colors flex items-center gap-2 shadow-lg"
             >
               <Plus size={20} /> New Entry
             </button>

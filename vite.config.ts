@@ -15,11 +15,11 @@ function securityHeadersPlugin(): Plugin {
       // We set those via `_headers` (prod) and `server.headers` (dev).
       const cspContent = [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline'", // unsafe-inline needed for Vite's module scripts
+        "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com", // inline scripts exist in index.html; gtag.js loads from googletagmanager
         "style-src 'self' 'unsafe-inline'", // Fonts are self-hosted, no external CDN needed
         "font-src 'self'", // All fonts served from same origin
         "img-src 'self' data: https:",
-        "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com",
+        "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com https://www.google-analytics.com https://region1.google-analytics.com",
         "base-uri 'self'",
         "form-action 'self'",
         "upgrade-insecure-requests"
@@ -72,11 +72,11 @@ export default defineConfig(({ mode }) => {
           // CSP for development (more permissive for HMR)
           'Content-Security-Policy': [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval needed for Vite HMR
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com", // unsafe-eval needed for Vite HMR
             "style-src 'self' 'unsafe-inline'", // Self-hosted fonts
             "font-src 'self'", // All fonts served from same origin
             "img-src 'self' data: https:",
-            "connect-src 'self' ws: wss: https://*.supabase.co https://generativelanguage.googleapis.com",
+            "connect-src 'self' ws: wss: https://*.supabase.co https://generativelanguage.googleapis.com https://www.google-analytics.com https://region1.google-analytics.com",
             "frame-ancestors 'none'",
             "base-uri 'self'",
             "form-action 'self'"
