@@ -157,23 +157,30 @@ async function ensurePersonalOrgAndMembership(params: { supabase: SupabaseClient
     );
   }
 
-  // Baseline subscription: every user starts on Free.
-  // Stripe/webhook upgrades will overwrite this row.
-  const { error: subErr } = await supabase
+  // Check if subscription already exists before trying to insert.
+  // RLS only allows INSERT of free plans, so we can't upsert if user already has a paid plan.
+  const { data: existingSub } = await supabase
     .from("subscriptions")
-    .upsert(
-      {
+    .select("org_id")
+    .eq("org_id", userId)
+    .maybeSingle();
+
+  if (!existingSub) {
+    // No subscription exists - create a free one.
+    // Stripe/webhook upgrades will overwrite this row later.
+    const { error: subErr } = await supabase
+      .from("subscriptions")
+      .insert({
         org_id: userId,
         plan_id: "free",
         status: "active",
         stripe_customer_id: null,
         stripe_subscription_id: null,
         stripe_price_id: null,
-      },
-      { onConflict: "org_id", ignoreDuplicates: true }
-    );
-  if (subErr) {
-    throw new Error(`bootstrap subscriptions failed: ${subErr.message ?? String(subErr)}`);
+      });
+    if (subErr) {
+      throw new Error(`bootstrap subscriptions failed: ${subErr.message ?? String(subErr)}`);
+    }
   }
 }
 
