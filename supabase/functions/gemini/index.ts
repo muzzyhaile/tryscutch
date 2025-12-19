@@ -134,36 +134,18 @@ function createAuthedSupabaseClient(params: { req: Request }): SupabaseClient {
     },
   });
 }
-
-function createServiceSupabaseClient(): SupabaseClient {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in Edge Function env.");
-  }
-
-  return createClient(supabaseUrl, supabaseServiceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  });
-}
-
-async function ensurePersonalOrgAndMembership(params: { supabaseAdmin: SupabaseClient; userId: string }): Promise<void> {
-  const { supabaseAdmin, userId } = params;
+async function ensurePersonalOrgAndMembership(params: { supabase: SupabaseClient; userId: string }): Promise<void> {
+  const { supabase, userId } = params;
 
   // Personal org: org_id == user_id.
-  const { error: orgErr } = await supabaseAdmin
+  const { error: orgErr } = await supabase
     .from("organizations")
     .upsert({ id: userId, name: "Personal" }, { onConflict: "id", ignoreDuplicates: true });
   if (orgErr) {
     throw new Error(`bootstrap organizations failed: ${orgErr.message ?? String(orgErr)}`);
   }
 
-  const { error: memberErr } = await supabaseAdmin
+  const { error: memberErr } = await supabase
     .from("organization_members")
     .upsert(
       { org_id: userId, user_id: userId, role: "owner" },
@@ -177,7 +159,7 @@ async function ensurePersonalOrgAndMembership(params: { supabaseAdmin: SupabaseC
 
   // Baseline subscription: every user starts on Free.
   // Stripe/webhook upgrades will overwrite this row.
-  const { error: subErr } = await supabaseAdmin
+  const { error: subErr } = await supabase
     .from("subscriptions")
     .upsert(
       {
@@ -342,8 +324,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const supabase = createAuthedSupabaseClient({ req });
-    const supabaseAdmin = createServiceSupabaseClient();
-    await ensurePersonalOrgAndMembership({ supabaseAdmin, userId: user.id });
+    await ensurePersonalOrgAndMembership({ supabase, userId: user.id });
 
     const apiKey = Deno.env.get("GEMINI_API_KEY") ?? "";
     if (!apiKey) {
@@ -660,6 +641,7 @@ Output Markdown with these sections:
     }
 
     console.error("Edge Gemini error:", e);
-    return jsonResponse(500, { error: (e as Error)?.message ?? "Unknown error" });
+    const message = (e as Error)?.message ?? "Unknown error";
+    return jsonResponse(500, { error: message, message, code: "edge_function_error" });
   }
 });

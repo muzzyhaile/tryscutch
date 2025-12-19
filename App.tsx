@@ -592,7 +592,11 @@ const App: React.FC = () => {
         notify({ type: 'error', title: 'Quota Exceeded', message: error.message });
         setView(VIEW_STATES.BILLING);
       } else {
-        notify({ type: 'error', title: 'Analysis Failed', message: ERROR_MESSAGES.ANALYSIS_FAILED });
+        notify({
+          type: 'error',
+          title: 'Analysis Failed',
+          message: error instanceof Error ? error.message : ERROR_MESSAGES.ANALYSIS_FAILED,
+        });
       }
     } finally {
       setIsLoading(false);
