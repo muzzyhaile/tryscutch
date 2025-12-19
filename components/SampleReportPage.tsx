@@ -172,7 +172,7 @@ export const SampleReportPage: React.FC<SampleReportPageProps> = ({ onBack, onSt
       </div>
 
       <div className="rounded-[2rem] border border-zinc-200 bg-white p-7 md:p-10">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
             <div className="text-xs font-bold tracking-widest uppercase text-zinc-500">Theme overview</div>
             <h2 className="mt-2 text-2xl md:text-3xl font-bold tracking-tight text-zinc-950">What customers are talking about</h2>
@@ -181,7 +181,7 @@ export const SampleReportPage: React.FC<SampleReportPageProps> = ({ onBack, onSt
         </div>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-200">
-          <div className="grid grid-cols-12 gap-0 bg-zinc-50 px-4 py-3 text-[11px] font-bold tracking-widest uppercase text-zinc-500">
+          <div className="hidden md:grid grid-cols-12 gap-0 bg-zinc-50 px-4 py-3 text-[11px] font-bold tracking-widest uppercase text-zinc-500">
             <div className="col-span-5">Theme</div>
             <div className="col-span-3">Share</div>
             <div className="col-span-2">Sentiment</div>

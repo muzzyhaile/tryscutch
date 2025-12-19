@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Layers, Settings, Plus, LayoutGrid, CreditCard, FileText, Inbox, Library, LogOut, HelpCircle } from 'lucide-react';
+import { Layers, Settings, Plus, LayoutGrid, CreditCard, FileText, Inbox, Library, LogOut, HelpCircle, Menu } from 'lucide-react';
 
 type LayoutUser = {
   name?: string;
@@ -49,7 +49,9 @@ export const Layout: React.FC<LayoutProps> = ({
     user,
 }) => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
+  const mobileNavRef = useRef<HTMLDivElement | null>(null);
 
   const displayName = useMemo(() => {
     const raw = user?.name?.trim() || user?.email?.trim() || 'Account';
@@ -64,7 +66,7 @@ export const Layout: React.FC<LayoutProps> = ({
   }, [displayName]);
 
   useEffect(() => {
-    if (!isUserMenuOpen) return;
+    if (!isUserMenuOpen && !isMobileNavOpen) return;
 
     const onPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
@@ -72,11 +74,14 @@ export const Layout: React.FC<LayoutProps> = ({
       if (userMenuRef.current && !userMenuRef.current.contains(target)) {
         setIsUserMenuOpen(false);
       }
+      if (mobileNavRef.current && !mobileNavRef.current.contains(target)) {
+        setIsMobileNavOpen(false);
+      }
     };
 
     window.addEventListener('pointerdown', onPointerDown);
     return () => window.removeEventListener('pointerdown', onPointerDown);
-  }, [isUserMenuOpen]);
+  }, [isUserMenuOpen, isMobileNavOpen]);
 
   return (
     <div className="flex h-screen bg-white text-zinc-950 font-sans overflow-hidden selection:bg-zinc-900 selection:text-white">
@@ -170,10 +175,131 @@ export const Layout: React.FC<LayoutProps> = ({
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-white">
-        <header className="h-20 border-b border-zinc-100 flex items-center justify-between px-8 md:px-12 shrink-0 z-10 bg-white/80 backdrop-blur-md">
-          <div className="flex items-center gap-2 md:hidden">
-             <div className="w-8 h-8 bg-zinc-950 rounded-lg flex items-center justify-center text-white text-sm font-bold">S</div>
-             <span className="font-bold text-lg text-zinc-950 tracking-tight">Scutch</span>
+        <header className="h-20 border-b border-zinc-100 flex items-center justify-between px-4 sm:px-6 md:px-12 shrink-0 z-10 bg-white/80 backdrop-blur-md">
+          <div className="flex items-center gap-2 md:hidden" ref={mobileNavRef}>
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileNavOpen((v) => !v);
+                setIsUserMenuOpen(false);
+              }}
+              className="inline-flex items-center justify-center w-10 h-10 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 transition-colors"
+              aria-label="Open navigation"
+              aria-haspopup="menu"
+              aria-expanded={isMobileNavOpen}
+            >
+              <Menu size={18} className="text-zinc-700" />
+            </button>
+
+            <div className="flex items-center gap-2 select-none">
+              <div className="w-8 h-8 bg-zinc-950 rounded-lg flex items-center justify-center text-white text-sm font-bold">S</div>
+              <span className="font-bold text-lg text-zinc-950 tracking-tight">Scutch</span>
+            </div>
+
+            {isMobileNavOpen && (
+              <div
+                role="menu"
+                className="absolute left-4 right-4 top-[5.25rem] rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-200 overflow-hidden"
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    onGoHome();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                >
+                  <LayoutGrid size={18} className="text-zinc-400" />
+                  Projects
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    onForms();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                >
+                  <FileText size={18} className="text-zinc-400" />
+                  Forms
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    onFeedbackLibrary();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                >
+                  <Library size={18} className="text-zinc-400" />
+                  Feedback Library
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    onResponses();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                >
+                  <Inbox size={18} className="text-zinc-400" />
+                  Responses
+                </button>
+                <div className="h-px bg-zinc-100" />
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    onSettings();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                >
+                  <Settings size={18} className="text-zinc-400" />
+                  Settings
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    onBilling();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                >
+                  <CreditCard size={18} className="text-zinc-400" />
+                  Billing
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    onContextLibrary();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                >
+                  <Layers size={18} className="text-zinc-400" />
+                  Contexts
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setIsMobileNavOpen(false);
+                    onHelp();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                >
+                  <HelpCircle size={18} className="text-zinc-400" />
+                  Help
+                </button>
+              </div>
+            )}
           </div>
           <div className="hidden md:flex items-center gap-2 text-sm font-medium text-zinc-400">
              <span className="text-zinc-900">Workspace</span>
@@ -212,7 +338,7 @@ export const Layout: React.FC<LayoutProps> = ({
             {isUserMenuOpen && (
               <div
                 role="menu"
-                className="absolute right-8 md:right-12 top-[5.25rem] w-64 rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-200 overflow-hidden"
+                className="absolute right-4 sm:right-6 md:right-12 top-[5.25rem] w-[min(16rem,calc(100vw-2rem))] rounded-2xl border border-zinc-200 bg-white shadow-xl shadow-zinc-200 overflow-hidden"
               >
                 <button
                   type="button"
@@ -272,7 +398,7 @@ export const Layout: React.FC<LayoutProps> = ({
         </header>
 
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="max-w-7xl mx-auto p-6 md:p-12 lg:p-16">
+          <div className="max-w-7xl mx-auto p-4 sm:p-6 md:p-12 lg:p-16">
             {children}
           </div>
         </div>

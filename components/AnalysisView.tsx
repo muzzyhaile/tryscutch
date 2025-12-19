@@ -382,7 +382,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
   return (
     <div className={`space-y-12 pb-24 animate-in fade-in duration-700 relative ${isPrintView ? 'p-12 max-w-[210mm] mx-auto' : ''}`}>
       {/* Header Actions */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-zinc-100">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-zinc-100">
         <div className="space-y-2" id="report-header">
           <div className="flex items-center gap-3">
              <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-zinc-950 text-white uppercase tracking-widest">Completed</span>
@@ -392,32 +392,34 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
         </div>
         
         {!isPrintView && onLanguageChange && (
-            <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 w-full md:w-auto">
+            <div className="flex items-center gap-2">
                     <Globe size={18} className="text-zinc-400" />
                     <LanguageSwitcher 
                         currentLanguage={selectedLanguage}
                         onLanguageChange={onLanguageChange}
                     />
                 </div>
-                <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-start sm:justify-end">
                     <button 
                         onClick={copyMarkdown}
-                        className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
+                className="flex items-center gap-2 px-3 py-3 sm:px-4 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
                         title="Copy Report to Clipboard"
+                aria-label="Copy report"
                     >
                         {hasCopied ? <Check size={20} className="text-emerald-500"/> : <Copy size={20} />}
                     </button>
                     <button 
                         onClick={openPrintPage}
-                        className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
+                className="flex items-center gap-2 px-3 py-3 sm:px-4 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
                         title="Open Print View"
+                aria-label="Open print view"
                     >
                         <Printer size={20} />
                     </button>
                     <button 
                         onClick={exportJSON}
-                        className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
+                className="flex items-center gap-2 px-4 py-3 sm:px-6 bg-white border-2 border-zinc-100 text-zinc-500 font-bold rounded-xl hover:border-zinc-300 hover:text-zinc-950 transition-all"
                     >
                         <Download size={20} />
                         JSON
@@ -425,9 +427,18 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ project, onUpdatePro
                     <button 
                         onClick={exportPDF}
                         disabled={isExporting}
-                        className="flex items-center gap-2 px-6 py-3 bg-zinc-950 border-2 border-zinc-950 text-white font-bold rounded-xl hover:bg-zinc-800 hover:border-zinc-800 hover:shadow-lg transition-all"
+                className="flex items-center gap-2 px-4 py-3 sm:px-6 bg-zinc-950 border-2 border-zinc-950 text-white font-bold rounded-xl hover:bg-zinc-800 hover:border-zinc-800 hover:shadow-lg transition-all"
+                aria-label="Export report"
                     >
-                        {isExporting ? <span className="animate-pulse">Generating...</span> : <><FileDown size={20} /> Export Report</>}
+                {isExporting ? (
+                  <span className="animate-pulse">Generating...</span>
+                ) : (
+                  <>
+                  <FileDown size={20} />
+                  <span className="hidden sm:inline">Export Report</span>
+                  <span className="sm:hidden">Export</span>
+                  </>
+                )}
                     </button>
                 </div>
             </div>

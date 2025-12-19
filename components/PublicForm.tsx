@@ -14,7 +14,7 @@ const PublicLegalFooter: React.FC = () => {
     <footer className="border-t border-zinc-200 bg-zinc-50 shrink-0">
       <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
         <div className="text-[11px] font-medium text-zinc-400">© {new Date().getFullYear()} Scutch</div>
-        <div className="flex gap-4 text-xs font-semibold text-zinc-400">
+        <div className="flex flex-wrap gap-4 text-xs font-semibold text-zinc-400">
           <a href="/privacy" className="hover:text-zinc-950 transition-colors">Privacy</a>
           <a href="/terms" className="hover:text-zinc-950 transition-colors">Terms</a>
           <a href="/impressum" className="hover:text-zinc-950 transition-colors">Site Notice</a>

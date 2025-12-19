@@ -288,17 +288,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
                             </button>
 
                             {inviteLink && (
-                                <div className="flex items-center gap-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                                     <input
                                         type="text"
                                         value={inviteLink}
                                         readOnly
-                                        className="flex-1 px-4 py-3 rounded-2xl border-2 border-zinc-100 bg-white text-zinc-700 font-mono text-sm"
+                                        className="min-w-0 w-full sm:flex-1 px-4 py-3 rounded-2xl border-2 border-zinc-100 bg-white text-zinc-700 font-mono text-sm"
                                     />
                                     <button
                                         type="button"
                                         onClick={copyInvite}
-                                        className="px-4 py-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold"
+                                        className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-bold"
                                         title="Copy"
                                     >
                                         {inviteCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}

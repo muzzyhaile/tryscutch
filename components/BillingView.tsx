@@ -291,7 +291,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                         </div>
                     </div>
 
-                    <div className="rounded-3xl bg-white/5 border border-white/10 p-6 flex items-center justify-between gap-4">
+                    <div className="rounded-3xl bg-white/5 border border-white/10 p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center">
                                 <Users className="w-5 h-5 text-white" />
@@ -310,7 +310,7 @@ export const BillingView: React.FC<BillingViewProps> = ({ userId, projectsCount 
                                 }
                                 window.location.href = 'mailto:admin@guidingventures.com?subject=Scutch%20Enterprise%20Seat%20Management';
                             }}
-                            className="px-6 py-3 bg-white text-zinc-950 font-bold rounded-xl hover:bg-zinc-200 transition-colors"
+                            className="w-full sm:w-auto px-6 py-3 bg-white text-zinc-950 font-bold rounded-xl hover:bg-zinc-200 transition-colors"
                         >
                             Manage Seats
                         </button>

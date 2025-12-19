@@ -98,11 +98,11 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
       </div>
 
       {/* Filters and Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <select
           value={selectedForm}
           onChange={(e) => setSelectedForm(e.target.value)}
-          className="px-4 py-2 rounded-lg border border-zinc-300 focus:border-zinc-950 focus:outline-none font-medium"
+          className="w-full sm:w-auto px-4 py-2 rounded-lg border border-zinc-300 focus:border-zinc-950 focus:outline-none font-medium"
         >
           <option value="all">All Forms ({responses.length})</option>
           {forms.map(form => (
@@ -115,7 +115,7 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
         <button
           onClick={exportToCSV}
           disabled={filteredResponses.length === 0}
-          className="flex items-center gap-2 px-4 py-2 bg-zinc-950 text-white rounded-lg font-bold hover:bg-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-zinc-950 text-white rounded-lg font-bold hover:bg-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Download size={18} />
           Export CSV
@@ -124,7 +124,7 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
         {selectedResponses.length > 0 && (
           <button
             onClick={handleBulkImport}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-all"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-all"
           >
             <FileText size={18} />
             Import {selectedResponses.length} to Analysis
@@ -174,18 +174,18 @@ export const ResponseViewer: React.FC<ResponseViewerProps> = ({
                           </span>
                         )}
                       </div>
-                      <div className="flex gap-4 text-xs text-zinc-400 mb-3">
-                        <span className="flex items-center gap-1">
+                      <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-zinc-400 mb-3">
+                        <span className="flex items-center gap-1 min-w-0">
                           <Calendar size={12} />
                           {new Date(response.submittedAt).toLocaleString()}
                         </span>
                         {response.respondentEmail ? (
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 min-w-0">
                             <Mail size={12} />
-                            {response.respondentEmail}
+                            <span className="max-w-[14rem] sm:max-w-none truncate">{response.respondentEmail}</span>
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1">
+                          <span className="flex items-center gap-1 min-w-0">
                             <User size={12} />
                             Anonymous
                           </span>
