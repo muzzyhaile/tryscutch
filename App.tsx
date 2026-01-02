@@ -220,6 +220,20 @@ const App: React.FC = () => {
       return;
     }
 
+    // Allow users to bypass the invite gate (e.g., self-serve signup) via a persisted local flag.
+    // This keeps the UI from hard-locking new users who don't have an invite code.
+    try {
+      const skipKey = `scutch_invite_skip_v1:${userId}`;
+      const skipped = localStorage.getItem(skipKey);
+      if (skipped === '1') {
+        setHasInviteAccess(true);
+        setIsInviteAccessLoading(false);
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
     let cancelled = false;
 
     const run = async () => {

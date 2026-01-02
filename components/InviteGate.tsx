@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { KeyRound, ArrowRight } from 'lucide-react';
+import { KeyRound, ArrowRight, X } from 'lucide-react';
 
 type InviteGateProps = {
   userId: string;
@@ -12,6 +12,15 @@ export const InviteGate: React.FC<InviteGateProps> = ({ userId, onRedeemed }) =>
   const [isChecking, setIsChecking] = useState(true);
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const dismiss = () => {
+    try {
+      localStorage.setItem(`scutch_invite_skip_v1:${userId}`, '1');
+    } catch {
+      // ignore
+    }
+    onRedeemed?.(false, 0);
+  };
 
   const isMissingInviteSchemaError = (e: any) => {
     const msg = String(e?.message ?? '');
@@ -111,7 +120,17 @@ export const InviteGate: React.FC<InviteGateProps> = ({ userId, onRedeemed }) =>
 
   return (
     <div className="min-h-[60vh] flex items-center justify-center">
-      <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-zinc-200">
+      <div className="max-w-md w-full bg-white p-8 rounded-2xl border border-zinc-200 relative">
+        <button
+          type="button"
+          onClick={dismiss}
+          className="absolute top-4 right-4 p-2 rounded-lg hover:bg-zinc-50 transition-colors"
+          aria-label="Close"
+          title="Close"
+        >
+          <X className="w-5 h-5 text-zinc-400" />
+        </button>
+
         <div className="flex items-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-xl bg-zinc-100 flex items-center justify-center">
             <KeyRound className="w-6 h-6 text-zinc-950" />
