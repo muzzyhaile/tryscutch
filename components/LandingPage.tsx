@@ -383,7 +383,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onViewSampleR
       {/* Footer */}
       <footer className="mt-auto py-6 px-6 border-t border-zinc-200 bg-zinc-50">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
-          <div className="text-[11px] font-medium text-zinc-400">{new Date().getFullYear()} Triscutch</div>
+          <div className="text-[11px] font-medium text-zinc-400">{new Date().getFullYear()} Tryscutch</div>
           <div className="flex gap-4 text-xs font-semibold text-zinc-400">
             <a href="/privacy" className="hover:text-black transition-colors">Privacy</a>
             <a href="/terms" className="hover:text-black transition-colors">Terms</a>

@@ -405,7 +405,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
         <footer className="border-t border-zinc-100 bg-white shrink-0">
           <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-16 py-4 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-            <div className="text-[11px] font-medium text-zinc-400">{new Date().getFullYear()} Triscutch</div>
+            <div className="text-[11px] font-medium text-zinc-400">{new Date().getFullYear()} Tryscutch</div>
             <nav className="flex flex-wrap gap-4 text-xs font-semibold text-zinc-400">
               <button
                 type="button"
