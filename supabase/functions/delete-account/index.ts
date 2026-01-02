@@ -76,6 +76,24 @@ async function bestEffortDelete(params: { service: any; table: string; where: Re
   }
 }
 
+async function bestEffortUpdate(params: {
+  service: any;
+  table: string;
+  values: Record<string, unknown>;
+  where: Record<string, string>;
+}) {
+  const { service, table, values, where } = params;
+  try {
+    let q = service.from(table).update(values);
+    for (const [k, v] of Object.entries(where)) {
+      q = q.eq(k, v);
+    }
+    await q;
+  } catch {
+    // best effort
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -98,7 +116,28 @@ Deno.serve(async (req: Request) => {
     const userId = user.id;
 
     // Best-effort cleanup for tables that may not have FKs.
+    // Keep this list aligned with migrations.
+    await bestEffortDelete({ service, table: "projects", where: { user_id: userId } });
     await bestEffortDelete({ service, table: "forms", where: { user_id: userId } });
+    await bestEffortDelete({ service, table: "organization_members", where: { user_id: userId } });
+
+    // Invite gating state:
+    // - Remove the user's own redemption record (so it doesn't follow them)
+    // - Scrub inviter references pointing at this user without deleting other users' records
+    // - Scrub created_by on invites (some invites may be referenced by other users' redemptions)
+    await bestEffortDelete({ service, table: "invite_redemptions", where: { invited_user_id: userId } });
+    await bestEffortUpdate({
+      service,
+      table: "invite_redemptions",
+      values: { inviter_user_id: null },
+      where: { inviter_user_id: userId },
+    });
+    await bestEffortUpdate({
+      service,
+      table: "invites",
+      values: { created_by: null },
+      where: { created_by: userId },
+    });
 
     // Delete the personal workspace (org_id == userId). This cascades to many org-scoped tables.
     await service.from("organizations").delete().eq("id", userId);

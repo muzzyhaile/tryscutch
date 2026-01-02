@@ -130,6 +130,10 @@ Then click **Continue with Google** on the login screen.
 
 Scutch follows SOLID principles and clean architecture patterns:
 
+## 📚 Ops Playbooks
+
+- Production + scalability: see [RUNBOOK_PRODUCTION_AND_SCALABILITY.md](RUNBOOK_PRODUCTION_AND_SCALABILITY.md)
+
 ### Design Patterns
 
 - **Repository Pattern**: Storage abstraction layer (`lib/storage.ts`) separates data persistence from business logic

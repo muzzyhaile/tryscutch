@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { User, Lock, Trash2, Bell, Save, CreditCard, Building2, Link as LinkIcon, Copy, Check } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { storage } from '../lib/storage';
 import { slugify } from '../lib/slug';
 
 type SettingsViewProps = {
@@ -186,6 +187,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
         try {
             const { error: fnErr } = await supabase.functions.invoke('delete-account', { body: {} });
             if (fnErr) throw new Error(fnErr.message);
+
+            // Clear any cached per-user data so it cannot be backfilled into a new account.
+            // This is scoped to this site’s origin.
+            storage.clear();
 
             // Best-effort sign out locally.
             await supabase.auth.signOut();
