@@ -86,6 +86,15 @@ async function stripeFormRequest(params: { path: string; form: URLSearchParams }
   return json as any;
 }
 
+function isStripeMissingCustomerError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err ?? "");
+  // We throw with the body JSON embedded in the message, so string matching is reliable here.
+  return (
+    message.includes('"code":"resource_missing"') &&
+    (message.includes('"param":"customer"') || message.toLowerCase().includes("no such customer"))
+  );
+}
+
 function resolvePriceId(planId: PlanId): string {
   const starter = requireEnv("STRIPE_PRICE_STARTER");
   const pro = requireEnv("STRIPE_PRICE_PRO");
@@ -183,21 +192,59 @@ Deno.serve(async (req: Request) => {
 
     const priceId = resolvePriceId(planId);
 
-    const session = await stripeFormRequest({
-      path: "checkout/sessions",
-      form: new URLSearchParams({
-        mode: "subscription",
-        customer: customerId,
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-        "line_items[0][price]": priceId,
-        "line_items[0][quantity]": "1",
-        "metadata[org_id]": orgId,
-        "metadata[plan_id]": planId,
-        "subscription_data[metadata][org_id]": orgId,
-        "subscription_data[metadata][plan_id]": planId,
-      }),
-    });
+    const createCheckoutSession = () =>
+      stripeFormRequest({
+        path: "checkout/sessions",
+        form: new URLSearchParams({
+          mode: "subscription",
+          customer: customerId,
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          "line_items[0][price]": priceId,
+          "line_items[0][quantity]": "1",
+          "metadata[org_id]": orgId,
+          "metadata[plan_id]": planId,
+          "subscription_data[metadata][org_id]": orgId,
+          "subscription_data[metadata][plan_id]": planId,
+        }),
+      });
+
+    let session: any;
+    try {
+      session = await createCheckoutSession();
+    } catch (e) {
+      // If the stored customer was deleted / is from a different Stripe environment (test vs live),
+      // Stripe returns resource_missing. In that case, recreate and retry once.
+      if (!customerId || !isStripeMissingCustomerError(e)) throw e;
+
+      const customer = await stripeFormRequest({
+        path: "customers",
+        form: new URLSearchParams({
+          email: user.email ?? "",
+          "metadata[org_id]": orgId,
+          "metadata[user_id]": user.id,
+          "metadata[recreated_due_to_missing_customer]": "true",
+        }),
+      });
+
+      customerId = customer.id;
+
+      await service
+        .from("subscriptions")
+        .upsert(
+          {
+            org_id: orgId,
+            plan_id: planId,
+            status: "incomplete",
+            stripe_customer_id: customerId,
+            // Don't overwrite stripe_subscription_id here; webhook will reconcile.
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "org_id" }
+        );
+
+      session = await createCheckoutSession();
+    }
 
     return jsonResponse(200, { url: session.url });
   } catch (e) {

@@ -22,6 +22,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
     const [bonusGrantAmount, setBonusGrantAmount] = useState<number | null>(null);
     const [isBonusLoading, setIsBonusLoading] = useState(false);
     const [bonusError, setBonusError] = useState<string | null>(null);
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+    const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
     const nextSlug = useMemo(() => slugify(publicOrgName), [publicOrgName]);
 
@@ -168,6 +170,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
             }
         } finally {
             setIsSavingOrg(false);
+        }
+    };
+
+    const deleteAccount = async () => {
+        if (!userId) return;
+
+        const ok = window.confirm(
+            'This will permanently delete your account and workspace, including projects and billing history. This cannot be undone. Continue?'
+        );
+        if (!ok) return;
+
+        setDeleteAccountError(null);
+        setIsDeletingAccount(true);
+        try {
+            const { error: fnErr } = await supabase.functions.invoke('delete-account', { body: {} });
+            if (fnErr) throw new Error(fnErr.message);
+
+            // Best-effort sign out locally.
+            await supabase.auth.signOut();
+            window.location.href = '/';
+        } catch (e) {
+            setDeleteAccountError(e instanceof Error ? e.message : 'Failed to delete account');
+        } finally {
+            setIsDeletingAccount(false);
         }
     };
 
@@ -466,9 +492,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onBilling, userId })
                <div>
                    <h3 className="font-bold text-rose-900 text-lg">Delete Workspace</h3>
                    <p className="text-rose-700/80">Permanently remove all projects, data, and account information.</p>
+                   {deleteAccountError ? (
+                        <p className="mt-3 text-sm text-rose-700">{deleteAccountError}</p>
+                   ) : null}
                </div>
-               <button className="px-6 py-3 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-700 transition-colors">
-                   Delete Account
+               <button
+                    type="button"
+                    onClick={deleteAccount}
+                    disabled={isDeletingAccount}
+                    className="px-6 py-3 bg-rose-600 text-white font-bold rounded-xl hover:bg-rose-700 transition-colors disabled:opacity-60"
+               >
+                   {isDeletingAccount ? 'Deleting…' : 'Delete Account'}
                </button>
            </div>
         </section>

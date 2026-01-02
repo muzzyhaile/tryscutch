@@ -84,6 +84,14 @@ async function stripeFormRequest(params: { path: string; form: URLSearchParams }
   return json as any;
 }
 
+function isStripeMissingCustomerError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err ?? "");
+  return (
+    message.includes('"code":"resource_missing"') &&
+    (message.includes('"param":"customer"') || message.toLowerCase().includes("no such customer"))
+  );
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -125,13 +133,29 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(400, { error: "No Stripe customer on file" });
     }
 
-    const session = await stripeFormRequest({
-      path: "billing_portal/sessions",
-      form: new URLSearchParams({
-        customer: customerId,
-        return_url: returnUrl,
-      }),
-    });
+    let session: any;
+    try {
+      session = await stripeFormRequest({
+        path: "billing_portal/sessions",
+        form: new URLSearchParams({
+          customer: customerId,
+          return_url: returnUrl,
+        }),
+      });
+    } catch (e) {
+      if (!isStripeMissingCustomerError(e)) throw e;
+
+      // Customer id likely from a different Stripe environment or was deleted.
+      // Clear linkage so the user can run checkout again.
+      await service
+        .from("subscriptions")
+        .update({ stripe_customer_id: null, stripe_subscription_id: null, updated_at: new Date().toISOString() })
+        .eq("org_id", orgId);
+
+      return jsonResponse(409, {
+        error: "Stripe customer missing. Please start checkout again to relink billing.",
+      });
+    }
 
     return jsonResponse(200, { url: session.url });
   } catch (e) {
