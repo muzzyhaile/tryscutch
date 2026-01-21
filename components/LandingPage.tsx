@@ -133,10 +133,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onViewSampleR
           <div className="pt-6 flex flex-col items-center gap-3">
             <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-zinc-500">
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 size={16} className="text-emerald-600" />
-                <span className="font-semibold">No credit card required</span>
-              </div>
-              <div className="flex items-center gap-1.5">
                 <Shield size={16} className="text-emerald-600" />
                 <span className="font-semibold">Private & secure</span>
               </div>
@@ -176,7 +172,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onViewSampleR
                     You spend hours reading through hundreds of responses, trying to identify patterns and tag themes manually. By the time you're done, the insights are stale and your team has moved on.
                   </p>
                   <p className="text-red-700 font-semibold text-base">
-                    → Every week you delay means more frustrated customers and missed opportunities.
+                    Every week you delay means more frustrated customers and missed opportunities.
                   </p>
                 </div>
               </div>
@@ -196,7 +192,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onViewSampleR
                     Without proper clustering and sentiment analysis, you miss the signals that matter. That one feature everyone hates? Buried in your backlog. The bug causing churn? Lost in a sea of "everything's fine" responses.
                   </p>
                   <p className="text-orange-700 font-semibold text-base">
-                    → You're making decisions blind, using gut feelings instead of data.
+                    You're making decisions blind, using gut feelings instead of data.
                   </p>
                 </div>
               </div>
@@ -216,7 +212,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onViewSampleR
                     When feedback synthesis depends on one person's interpretation, other teams question the conclusions. Sales wants different data than Product. Leadership wants executive summaries you don't have time to create.
                   </p>
                   <p className="text-amber-700 font-semibold text-base">
-                    → So feedback sits unused, and you keep building what's loudest, not what's most important.
+                    So feedback sits unused, and you keep building what's loudest, not what's most important.
                   </p>
                 </div>
               </div>
@@ -425,14 +421,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onViewSampleR
           </p>
           
           <div className="bg-white rounded-2xl border border-zinc-200 p-8 max-w-3xl mx-auto">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="flex -space-x-2">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="w-10 h-10 rounded-full bg-gradient-to-br from-zinc-200 to-zinc-300 border-2 border-white"></div>
-                ))}
-              </div>
-              <span className="text-sm font-bold text-zinc-600">Early adopters shaping the product</span>
-            </div>
             <p className="text-zinc-600 leading-relaxed">
               We're working with product teams, founders, and researchers to build the feedback analysis tool they actually need. Real feedback. Real improvements. No bullshit.
             </p>
@@ -628,7 +616,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, onViewSampleR
            </div>
            
            <p className="text-sm text-zinc-500">
-             No credit card required • Setup in 2 minutes • Cancel anytime
+             Setup in 2 minutes • Cancel anytime
            </p>
         </div>
       </section>
