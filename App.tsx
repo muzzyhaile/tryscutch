@@ -18,6 +18,7 @@ import { LegalLayout } from './components/LegalLayout';
 import { PrivacyPage } from './components/PrivacyPage';
 import { TermsPage } from './components/TermsPage';
 import { ImpressumPage } from './components/ImpressumPage';
+import { ReadinessCheck } from './components/ReadinessCheck';
 import { CookieBanner } from './components/CookieBanner';
 import { Project, AnalysisResult } from './types';
 import { FormResponse } from './types-forms';
@@ -41,6 +42,7 @@ function viewForPathname(pathname: string): ViewState {
   if (pathname === ROUTES.PRIVACY) return VIEW_STATES.PRIVACY;
   if (pathname === ROUTES.TERMS) return VIEW_STATES.TERMS;
   if (pathname === ROUTES.IMPRESSUM) return VIEW_STATES.IMPRESSUM;
+  if (pathname === ROUTES.READY) return VIEW_STATES.READY;
   return VIEW_STATES.LANDING;
 }
 
@@ -182,6 +184,12 @@ const App: React.FC = () => {
         setIsFormView(false);
         setFormIdParam(null);
         setView(VIEW_STATES.IMPRESSUM);
+        return;
+      }
+      if (path === ROUTES.READY) {
+        setIsFormView(false);
+        setFormIdParam(null);
+        setView(VIEW_STATES.READY);
         return;
       }
 
@@ -435,6 +443,10 @@ const App: React.FC = () => {
         </LegalLayout>
       </>
     );
+  }
+
+  if (view === VIEW_STATES.READY) {
+    return <ReadinessCheck />;
   }
 
   if (view === VIEW_STATES.SAMPLE_REPORT) {

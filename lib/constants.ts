@@ -23,6 +23,7 @@ export const VIEW_STATES = {
   PRIVACY: 'privacy',
   TERMS: 'terms',
   IMPRESSUM: 'impressum',
+  READY: 'ready',
 } as const;
 
 export type ViewState = typeof VIEW_STATES[keyof typeof VIEW_STATES];
@@ -48,6 +49,7 @@ export const ROUTES = {
   PRIVACY: '/privacy',
   TERMS: '/terms',
   IMPRESSUM: '/impressum',
+  READY: '/ready',
 } as const;
 
 /**
